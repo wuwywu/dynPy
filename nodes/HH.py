@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numba import njit, prange
 from base_mods import Neurons
+from utils.utils_f import spikevent
 
 # seed = 0
 # np.random.seed(seed)                # 给numpy设置随机种子
@@ -68,15 +69,16 @@ class HH(Neurons):
         N : 建立神经元的数量
         method : 计算非线性微分方程的方法，（"euler", "rk4"）
         dt : 计算步长
+        spiking : 是否计算神经元的放电（True, False）
         temperature: 温度(℃)
 
         params_nodes (dict): 节点模型参数
-        vars_nodes (numpy.ndarray): 节点模型变量
+        vars_nodes (numpy.ndarray): 节点模型状态变量
         t (float): 模拟的理论时间
     """
-    def __init__(self, N=1, method="euler", dt=0.01, temperature=None):
-        super().__init__(N, method=method, dt=dt)
-        # self.num = N  # 神经元数量
+    def __init__(self, N=1, method="euler", dt=0.01, spiking=True, temperature=6.3):
+        super().__init__(N, method=method, dt=dt, spiking=spiking)
+        # self.N = N  # 神经元数量
         # self.dt = dt
         # self.method = method
         self.temperature = temperature
@@ -99,10 +101,10 @@ class HH(Neurons):
     def _vars(self):
         self.t = 0  # 运行时间
         # 模型变量的初始值
-        self.v0 = np.random.uniform(-.3, .3, self.num)
-        self.m0 = 1 * np.random.rand(self.num)
-        self.h0 = 1 * np.random.rand(self.num)
-        self.n0 = 1 * np.random.rand(self.num)
+        self.v0 = np.random.uniform(-.3, .3, self.N)
+        self.m0 = 1 * np.random.rand(self.N)
+        self.h0 = 1 * np.random.rand(self.N)
+        self.n0 = 1 * np.random.rand(self.N)
         self.vars_nodes = np.array([self.v0, self.m0, self.h0, self.n0])
 
         self.N_vars = 4  # 变量的数量
@@ -112,38 +114,45 @@ class HH(Neurons):
         args:
             Io: 输入到神经元模型的外部激励，
                 shape:
-                    (len(axis), self.num)
-                    (self.num, )
+                    (len(axis), self.N)
+                    (self.N, )
                     float
             axis: 需要加上外部激励的维度
                 list
         """
         Iex = self.params_nodes["Iex"]      # 恒定的外部激励
-        I = np.zeros((self.N_vars, self.num))
+        I = np.zeros((self.N_vars, self.N))
         I[0, :] = Iex      
         I[axis, :] += Io
         params_list = list(self.params_nodes.values())
         self.method(HH_model, self.vars_nodes, self.t, self.dt, I, params_list)  #
+        
+        if self.spiking: 
+            self._spikes_eval(self.vars_nodes[0], self.t, self.th_up, self.th_down, self.flag, self.flaglaunch, self.firingTime)  # 放电测算
 
         self.t += self.dt  # 时间前进
 
 
-
 if __name__ == "__main__": 
     N = 2
-    method = "euler" # "rk4", "euler"
-    nodes = HH(N=N, method=method, temperature=6.3)
+    method = "euler"                # "rk4", "euler"
+    nodes = HH(N=N, method=method)  # , temperature=6.3
     nodes.params_nodes["Iex"] = 6.3
+    spiker = spikevent(N)
 
     time = []
     mem = []
 
-    for i in range(10000):
+    for i in range(100_00):
         nodes()
         time.append(nodes.t)
         mem.append(nodes.vars_nodes[0].copy())
+        spiker(nodes.t, nodes.flaglaunch)
 
-    ax1 = plt.subplot()
+    ax1 = plt.subplot(211)
     plt.plot(time, mem)
+    plt.subplot(212, sharex=ax1)
+    spiker.pltspikes()
+    # print(se.Tspike_list)
 
     plt.show()
