@@ -135,7 +135,7 @@ class HH(Neurons):
 
 if __name__ == "__main__": 
     N = 2
-    method = "euler"                # "rk4", "euler"
+    method = "euler"               # "rk4", "euler"
     nodes = HH(N=N, method=method)  # , temperature=6.3
     nodes.params_nodes["Iex"] = 6.3
     spiker = spikevent(N)
