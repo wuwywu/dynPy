@@ -68,8 +68,8 @@ class Neurons:
     def _vars_f(self):
         self.t = 0  # 运行时间
         # 模型放电变量
-        self.flag = np.zeros(self.N, dtype=int)           # 模型放电标志(>0, 放电)
-        self.flaglaunch = np.zeros(self.N, dtype=int)     # 模型开始放电标志(==1, 放电刚刚开始)
+        self.flag = np.zeros(self.N, dtype=np.int32)           # 模型放电标志(>0, 放电)
+        self.flaglaunch = np.zeros(self.N, dtype=np.int32)     # 模型开始放电标志(==1, 放电刚刚开始)
         self.firingTime = np.zeros(self.N)                # 记录放电时间(上次放电)
 
     def __call__(self, Io=0, axis=[0]):
@@ -227,8 +227,8 @@ class Synapse:
         self.t = self.post.t  # 这个是非常重要的
 
         # 触前和突触后的状态
-        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(float)]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(float)]
+        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
+        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
 
         I_post = self.syn(pre_state, post_state, self.w, self.conn)  # 突触后神经元接收的突触电流
 

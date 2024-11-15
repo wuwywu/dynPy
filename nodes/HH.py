@@ -105,7 +105,7 @@ class HH(Neurons):
         self.m0 = 1 * np.random.rand(self.N)
         self.h0 = 1 * np.random.rand(self.N)
         self.n0 = 1 * np.random.rand(self.N)
-        self.vars_nodes = np.array([self.v0, self.m0, self.h0, self.n0])
+        self.vars_nodes = np.vstack((self.v0, self.m0, self.h0, self.n0))
 
         self.N_vars = 4  # 变量的数量
 

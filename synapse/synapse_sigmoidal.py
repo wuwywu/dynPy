@@ -77,8 +77,8 @@ class syn_sigmoidal(Synapse):
         self.t = self.post.t  # 这个是非常重要的
 
         # 触前和突触后的状态
-        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(float)]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(float)]
+        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
+        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
         params_list = list(self.params_syn.values())
 
         I_post = self.syn(pre_state, post_state, self.w, self.conn, params_list)  # 突触后神经元接收的突触电流, params_list
@@ -131,8 +131,8 @@ class syn_sigmoidal_delay(Synapse):
 
         # 触前和突触后的状态
         pre_mem = self.delayer(self.pre.vars_nodes[0])              # 存储延迟，并给出延迟的值
-        pre_state = [pre_mem, self.pre.firingTime, self.pre.flaglaunch.astype(float)]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(float)]
+        pre_state = [pre_mem, self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
+        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
 
         # 将突触参数转化为列表
         params_list = list(self.params_syn.values())
