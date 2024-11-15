@@ -146,7 +146,7 @@ class Nodes:
         pass
 
     def _vars_f(self):
-        self.t = 0  # 运行时间
+        self.t = 0.  # 运行时间
 
     def __call__(self, Io=0, axis=[0]):
         """
@@ -203,17 +203,19 @@ class Synapse:
         elif self.synType == "chem":
             self.syn = syn_chem  # Alpha_化学突触
 
-        self.pre = pre  # 网络前节点
-        self.post = post  # 网络后节点
-        self.conn = conn  # 连接矩阵
-        self.dt = post.dt  # 计算步长
+        self.pre = pre                  # 网络前节点
+        self.post = post                # 网络后节点
+        self.conn = conn                # 连接矩阵
+        self.dt = post.dt               # 计算步长
+        self._params_f()
+        self._vars_f()
 
     def _params_f(self):
         # 0维度--post，1维度--pre
         self.w = .1 * np.ones((self.post.N, self.pre.N))  # 设定连接权重
 
     def _vars_f(self):
-        self.t = self.post.t = 0  # 运行时间
+        self.t = self.post.t = 0.  # 运行时间
 
     def __call__(self):
         """
@@ -225,8 +227,8 @@ class Synapse:
         self.t = self.post.t  # 这个是非常重要的
 
         # 触前和突触后的状态
-        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch]
+        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(float)]
+        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(float)]
 
         I_post = self.syn(pre_state, post_state, self.w, self.conn)  # 突触后神经元接收的突触电流
 
@@ -235,7 +237,7 @@ class Synapse:
         return I_post
 
 @njit
-def syn_electr(pre_state, post_state, w, conn):
+def syn_electr(pre_state, post_state, w, conn, *args):
     """
         电突触
         pre_state: 突触前的状态
@@ -254,7 +256,7 @@ def syn_electr(pre_state, post_state, w, conn):
     return Isyn
 
 @njit
-def syn_chem(pre_state, post_state, w, conn):
+def syn_chem(pre_state, post_state, w, conn, *args):
     """
         化学突触
         pre_state: 突触前的状态
@@ -360,4 +362,15 @@ def delay(x, k, delayLong, delay):
     delay[:, k] = x
 
     return delay_o, k
+
+# ========= 连接矩阵to拉普拉斯矩阵 =========
+@njit
+def to_laplacian(adjacency_matrix):
+    """
+        计算拉普拉斯矩阵
+        adjacency_matrix: 邻接矩阵
+    """
+    degree_matrix = np.diag(np.sum(adjacency_matrix, axis=1))
+    laplacian_matrix = degree_matrix - adjacency_matrix
+    return laplacian_matrix
 

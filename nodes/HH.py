@@ -99,7 +99,7 @@ class HH(Neurons):
         }   
 
     def _vars(self):
-        self.t = 0  # 运行时间
+        self.t = 0.  # 运行时间
         # 模型变量的初始值
         self.v0 = np.random.uniform(-.3, .3, self.N)
         self.m0 = 1 * np.random.rand(self.N)

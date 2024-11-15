@@ -74,3 +74,16 @@ def delay(x, k, delayLong, delay):
     delay[:, k] = x
 
     return delay_o, k
+
+
+# ================================= 连接矩阵to拉普拉斯矩阵 =================================
+@njit
+def to_laplacian(adjacency_matrix):
+    """
+        计算拉普拉斯矩阵
+        adjacency_matrix: 邻接矩阵
+    """
+    degree_matrix = np.diag(np.sum(adjacency_matrix, axis=1))
+    laplacian_matrix = degree_matrix - adjacency_matrix
+    return laplacian_matrix
+
