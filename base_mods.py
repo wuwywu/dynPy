@@ -97,6 +97,13 @@ class Neurons:
 
         self.t += self.dt  # 时间前进
 
+    def set_vars_vals(self, vars_vals=[0, 0, ...]):
+        """
+            用于自定义所有状态变量的值
+        """
+        self.vars_nodes[0] = vars_vals[0]*np.ones(self.N)
+        self.vars_nodes[1] = vars_vals[1]*np.ones(self.N)
+
 @njit
 def model(vars, t, I, params):
     res = np.zeros_like(vars)
@@ -178,6 +185,13 @@ class Nodes:
         # self.method(model, self.vars_nodes, self.t, self.dt, I, params_list)  #
 
         self.t += self.dt  # 时间前进
+
+    def set_vars_vals(self, vars_vals=[0, 0, ...]):
+        """
+            用于自定义所有状态变量的值
+        """
+        self.vars_nodes[0] = vars_vals[0]*np.ones(self.N)
+        self.vars_nodes[1] = vars_vals[1]*np.ones(self.N)
 
 
 # ================================= 突触模型的基类 =================================
