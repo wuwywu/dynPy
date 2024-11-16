@@ -21,6 +21,48 @@ from scipy.optimize import curve_fit
 # random.seed(2024)
 
 
+# ============= 定义无标度网络的创建函数(并行版) =============
+@njit
+def create_sf_jit(n=100, n_init=5, n_add=2):
+    """
+    创建一个BA无标度网络。
+    n: int, 网络的总节点数。
+    n_init: int, 网络的初始节点数。
+    n_add: int, 每个新节点与已有节点连接的数目。
+    """
+    matrix = np.zeros((n, n))  # 初始化邻接矩阵
+    
+    # 开始创建一个全连接的初始网络
+    matrix[:n_init, :n_init] = 1
+    matrix[:n_init, :n_init] -= np.eye(n_init)  # 移除自环
+
+    Js = n_init
+    while Js < n:
+        # 计算每个已有节点被连接的概率
+        prob1 = np.sum(matrix[:Js, :Js], axis=1) / np.sum(matrix[:Js, :Js])
+        
+        # 根据概率选择目标节点
+        targets = []
+        while len(targets) < n_add:
+            r = np.random.rand()
+            cumulative_prob = 0.0
+            for i in range(Js):
+                cumulative_prob += prob1[i]
+                if r < cumulative_prob and i not in targets:
+                    targets.append(i)
+                    break
+        
+        # 在邻接矩阵中添加连接
+        for target in targets:
+            matrix[Js, target] = 1
+            matrix[target, Js] = 1
+
+        Js += 1
+
+    return matrix
+
+
+# ============= 定义无标度网络的创建函数 =============
 def create_sf(n=100, n_init=5, n_add=2):
     """
         创建一个BA无标度网络网络
@@ -201,6 +243,8 @@ class scale_free:
 if __name__ == "__main__":
     Num = int(100)
     # conn = create_sw(Num, 4, 0.5)
-    conn = create_sf(Num, 5, 2)
+    # conn = create_sf(Num, 5, 2)
+    conn = create_sf_jit(Num, 5, 2)
+    print(conn.sum(1))
     print(conn.sum()/Num)
 

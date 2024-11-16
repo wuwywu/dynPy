@@ -14,7 +14,11 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from numba import njit, prange
+import random
 from base_mods import Synapse
+
+# np.random.seed(2024)
+# random.seed(2024)
 
 @njit
 def syn_chem_sigmoidal(pre_state, post_state, w, conn, params):

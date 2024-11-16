@@ -13,7 +13,105 @@ import copy
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from numba import njit, prange
+import random
 
+# np.random.seed(2024)
+# random.seed(2024)
+
+
+# ======================= 定义无标度网络的创建函数(并行版) =======================
+# 创建一个小世界网络的连接矩阵(双向)
+@njit
+def create_sw_jit(n, k, p):
+    """
+    使用 numba 加速创建小世界网络的连接矩阵(双向)
+    
+    参数:
+        n (int): 网络中的节点数
+        k (int): 每个节点的初始平均度数（必须为偶数）
+        p (float): 重连概率（0到1之间）
+        
+    返回:
+        np.ndarray: 小世界网络的连接矩阵
+    """
+    # 创建一个环形网络
+    matrix = np.zeros((n, n), dtype=np.int32)
+    for i in range(n):
+        for j in range(1, k // 2 + 1):
+            matrix[i, (i + j) % n] = 1
+            matrix[i, (i - j) % n] = 1
+
+    # 重连部分连接
+    for i in range(n):
+        for j in range(1, k // 2 + 1):
+            if np.random.rand() < p:
+                # 找到一个合适的新邻居，确保不是自己，也不是当前的邻居
+                current_neighbor = (i + j) % n
+                available = []
+                for x in range(n):
+                    if x != i and matrix[i, x] == 0:
+                        available.append(x)
+                
+                if len(available) > 0:  # 确保还有可用的节点进行重连
+                    new_neighbor = available[np.random.randint(0, len(available))]
+                    # 断开原有连接
+                    matrix[i, current_neighbor] = 0
+                    matrix[current_neighbor, i] = 0
+                    # 建立新的连接
+                    matrix[i, new_neighbor] = 1
+                    matrix[new_neighbor, i] = 1
+
+    return matrix
+
+
+# 创建一个单向连接的小世界网络
+@njit
+def create_Disw_jit(n, k, p):
+    """
+    使用 numba 加速创建一个单向连接的小世界网络
+
+    参数:
+        n (int): 网络中节点的数量
+        k (int): 每个节点的出度
+        p (float): 重连概率
+
+    返回:
+        numpy.ndarray: 表示连接关系的矩阵
+    """
+    # 创建一个 n x n 的零矩阵
+    matrix = np.zeros((n, n), dtype=np.int32)
+
+    # 初始化环形网络
+    for i in range(n):
+        for j in range(1, k + 1):
+            matrix[i, (i + j) % n] = 1
+
+    # 随机重连节点
+    for i in range(n):
+        for j in range(1, k + 1):
+            if np.random.rand() < p:
+                # 当前的邻居
+                current_neighbors = np.where(matrix[i] == 1)[0]
+                # 找到可用的非邻居节点
+                available = []
+                for x in range(n):
+                    if x != i and x not in current_neighbors:
+                        available.append(x)
+
+                if len(available) > 0:  # 确保存在可用节点
+                    new_neighbor = available[np.random.randint(0, len(available))]
+                    # 断开旧的连接
+                    old_neighbor = (i + j) % n
+                    if matrix[i, old_neighbor] == 1:
+                        matrix[i, old_neighbor] = 0
+                    # 创建新的连接
+                    matrix[i, new_neighbor] = 1
+
+    return matrix
+
+
+# ======================= 定义小世界网络的创建函数 ======================= 
 # 创建一个小世界网络的连接矩阵(双向)
 def create_sw(n, k, p):
     # 创建一个环形网络
@@ -334,5 +432,9 @@ class DiSmall_World:
 if __name__ == "__main__":
     Num = int(100)
     # conn = create_sw(Num, 4, 0.5)
-    conn = create_Disw(Num, 3, 0.4)
+    # conn = create_Disw(Num, 3, 0.4)
+    # conn = create_sw_jit(Num, 4, 0.5)
+    conn = create_Disw_jit(Num, 3, 0.4)
     print(conn)
+    print(conn.sum(1))
+    print(conn.sum()/Num)

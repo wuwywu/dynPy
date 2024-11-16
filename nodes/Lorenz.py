@@ -13,7 +13,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import numpy as np
 import matplotlib.pyplot as plt
 from numba import njit, prange
+import random
 from base_mods import Nodes
+
+# np.random.seed(2024)
+# random.seed(2024)
 
 
 @njit

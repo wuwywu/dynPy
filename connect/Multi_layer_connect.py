@@ -14,31 +14,37 @@ import copy
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from numba import njit, prange
+import random
 from scipy.optimize import curve_fit
+
+# np.random.seed(2024)
+# random.seed(2024)
+
 
 # 创建随机连接矩阵
 def random_connect(n_pre, n_post, p):
     random_matrix = np.random.rand(n_post, n_pre)
-    connection_matrix = (random_matrix < p).astype(int)
+    connection_matrix = (random_matrix < p).astype(np.int32)
     return connection_matrix
 
 
 # 创建一对一连接矩阵
 def one_to_one_connect(n):
-    return  np.eye(n, dtype=int)
+    return  np.eye(n, dtype=np.int32)
 
 
 # 创建一对多最近邻连接矩阵
-def one_to_many_connect(n, k, bound=None):
+def one_to_many_connect(n, k, bound=True):
     '''
-    n:神经元个数
-    k:最近邻连接个数
-    bound:是否考虑周期边界
+        n:神经元个数
+        k:最近邻连接个数
+        bound:是否考虑周期边界
     '''
-    one_to_many_matrix = np.zeros((n, n), dtype=int)
+    one_to_many_matrix = np.zeros((n, n), dtype=np.int32)
 
     # 不考虑周期边界
-    if bound is None:
+    if not bound:
         for i in range(n):
             for delta in range(-k//2, k//2 + 1):
                 neighbor = i + delta
@@ -47,7 +53,7 @@ def one_to_many_connect(n, k, bound=None):
                     one_to_many_matrix[i, neighbor] = 1
                     
     # 考虑周期边界              
-    if bound is not None:
+    if bound:
         for i in range(n):
             one_to_many_matrix[i, i] = 1  # 自身连接
             for j in range(1, k//2 + 1):
@@ -59,3 +65,13 @@ def one_to_many_connect(n, k, bound=None):
                 one_to_many_matrix[i, right_neighbor] = 1
 
     return  one_to_many_matrix
+
+
+if __name__ == "__main__":
+    Num = int(100)
+    # conn = random_connect(100, 100, .5)
+    # conn = one_to_one_connect(Num)
+    conn = one_to_many_connect(Num, 5, bound=False)
+    print(conn)
+    print(conn.sum(1))
+    print(conn.sum()/Num)

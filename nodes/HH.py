@@ -12,11 +12,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import numpy as np
 import matplotlib.pyplot as plt
 from numba import njit, prange
+import random
 from base_mods import Neurons
 from utils.utils_f import spikevent
 
-# seed = 0
-# np.random.seed(seed)                # 给numpy设置随机种子
+# np.random.seed(2024)
+# random.seed(2024)
+
 
 @njit
 def HH_model(vars, t, I, params):

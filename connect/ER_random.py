@@ -14,21 +14,28 @@ import copy
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from numba import njit, prange
+import random
+
+# np.random.seed(2024)
+# random.seed(2024)
 
 
 # 随机网络，G(n, p)模型  概率p连接一条边, 单向
+@njit
 def create_ER_p(n, p):
     """
     n-网络的总节点数
     p-网络中节点间连接的概率
     """
     random_matrix = np.random.rand(n, n)
-    connection_matrix = (random_matrix < p).astype(int)
+    connection_matrix = (random_matrix < p).astype(np.int32)
     np.fill_diagonal(connection_matrix, 0)  #不考虑自连接
     return connection_matrix
 
 
 # 随机网络，G(n, M)模型  网络固定有M条边，单向
+@njit
 def create_ER_M(n, M):
     """
     n-网络的总节点数
@@ -40,7 +47,7 @@ def create_ER_M(n, M):
         raise ValueError(f"M should be less than or equal to {max_edges} for n={n}")
     
     # 初始化一个全零矩阵
-    connection_matrix = np.zeros((n, n), dtype=int)
+    connection_matrix = np.zeros((n, n), dtype=np.int32)
     # 生成所有可能的边，不包括自环
     possible_edges = [(i, j) for i in range(n) for j in range(n) if i != j]
     # 随机选择M条边
@@ -297,3 +304,11 @@ class DiErdos_Renyi:
                 with_labels=False, edge_color='grey', arrows=True, arrowsize=arrow_size)
         plt.title("DiErdős-Rényi Random Graph")
         plt.show()
+
+
+if __name__ == "__main__":
+    Num = int(100)
+    # conn = create_ER_p(Num, .5)
+    conn = create_ER_M(Num, 500)
+    print(conn.sum(1))
+    print(conn.sum()/Num)
