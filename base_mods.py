@@ -159,6 +159,7 @@ class Nodes:
             axis: 需要加上外部激励的维度
                 list
         """
+        # Iex = self.params_nodes["Iex"]      # 恒定的外部激励
         # I = np.zeros((self.N_vars, self.N))
         # I[0, :] = self.Iex  # 恒定的外部激励
         # I[axis, :] += Io
