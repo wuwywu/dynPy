@@ -122,9 +122,7 @@ class HH(Neurons):
             axis: 需要加上外部激励的维度
                 list
         """
-        Iex = self.params_nodes["Iex"]      # 恒定的外部激励
-        I = np.zeros((self.N_vars, self.N))
-        I[0, :] = Iex      
+        I = np.zeros((self.N_vars, self.N))    
         I[axis, :] += Io
         params_list = list(self.params_nodes.values())
         self.method(HH_model, self.vars_nodes, self.t, self.dt, I, params_list)  #
@@ -148,7 +146,7 @@ if __name__ == "__main__":
     N = 2
     method = "euler"               # "rk4", "euler"
     nodes = HH(N=N, method=method)  # , temperature=6.3
-    nodes.params_nodes["Iex"] = 6.3
+    nodes.params_nodes["Iex"] = 10.
     spiker = spikevent(N)
 
     time = []

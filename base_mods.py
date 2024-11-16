@@ -87,7 +87,6 @@ class Neurons:
                 list
         """
         # I = np.zeros((self.N_vars, self.N))
-        # I[0, :] = self.Iex  # 恒定的外部激励
         # I[axis, :] += Io
 
         # params_list = list(self.params_nodes.values())
@@ -97,6 +96,14 @@ class Neurons:
         #     self._spikes_eval(self.vars_nodes[0], self.params_f, self.flag, self.flaglaunch, self.firingTime)  # 放电测算
 
         self.t += self.dt  # 时间前进
+
+@njit
+def model(vars, t, I, params):
+    res = np.zeros_like(vars)
+    # 常数参数
+    # params
+    # 状态变量
+    # vars
 
 @njit
 def spikes_eval(mem, t, th_up, th_down, flag, flaglaunch, firingTime):
