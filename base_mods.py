@@ -58,8 +58,8 @@ class Neurons:
         elif method == "rk4":   self.method = RK4
         elif method == "discrete":   self.method = discrete
 
+        self.spiking = spiking
         if spiking:  
-            self.spiking = spiking
             self._spikes_eval = spikes_eval
         self._params_f()
         self._vars_f()
@@ -111,6 +111,8 @@ def model(vars, t, I, params):
     # params
     # 状态变量
     # vars
+
+    return res
 
 @njit
 def spikes_eval(mem, t, th_up, th_down, flag, flaglaunch, firingTime):
@@ -176,9 +178,7 @@ class Nodes:
             axis: 需要加上外部激励的维度
                 list
         """
-        # Iex = self.params_nodes["Iex"]      # 恒定的外部激励
         # I = np.zeros((self.N_vars, self.N))
-        # I[0, :] = self.Iex  # 恒定的外部激励
         # I[axis, :] += Io
 
         # params_list = list(self.params_nodes.values())
@@ -192,6 +192,16 @@ class Nodes:
         """
         self.vars_nodes[0] = vars_vals[0]*np.ones(self.N)
         self.vars_nodes[1] = vars_vals[1]*np.ones(self.N)
+
+@njit
+def model(vars, t, I, params):
+    res = np.zeros_like(vars)
+    # 常数参数
+    # params
+    # 状态变量
+    # vars
+
+    return res
 
 
 # ================================= 突触模型的基类 =================================
@@ -345,7 +355,7 @@ def discrete(fun, x0, t, dt, *args):
     :return:
         x0 (numpy.ndarray): 下一个时间单位的状态变量
     """
-    x0 = fun(x0, t, *args)
+    x0[:] = fun(x0, t, *args)
     return x0
 
 
