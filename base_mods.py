@@ -40,27 +40,23 @@ class Neurons:
         N : 建立神经元的数量
         method : 计算非线性微分方程的方法，("euler", "rk4", "discrete")
         dt : 计算步长
-        spiking : 是否计算神经元的放电(True, False)
 
         params_f (dict): 节点模型参数
         
         t (float): 模拟的理论时间
     """
-    def __init__(self, N, method="euler", dt=0.01, spiking=True):
+    def __init__(self, N, method="euler", dt=0.01):
         self.N = N  # 神经元数量
         self.dt = dt
         # 选择数值计算方法
         self.method = method
-        method_options = ["euler", "rk4", "discrete"]
-        if method not in method_options:
-            raise ValueError(f"无效选择，method在{method_options}选择")
-        if method == "euler":   self.method = Euler
-        elif method == "rk4":   self.method = RK4
-        elif method == "discrete":   self.method = discrete
+        method_map = {"euler": Euler, "rk4": RK4, "discrete": discrete}
+        if method not in method_map:
+            raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
+        self.method = method_map[method]
 
-        self.spiking = spiking
-        if spiking:  
-            self._spikes_eval = spikes_eval
+        self.fun_switch()
+        self.fun_sets()
         self._params_f()
         self._vars_f()
 
@@ -73,7 +69,11 @@ class Neurons:
         # 模型放电变量
         self.flag = np.zeros(self.N, dtype=np.int32)           # 模型放电标志(>0, 放电)
         self.flaglaunch = np.zeros(self.N, dtype=np.int32)     # 模型开始放电标志(==1, 放电刚刚开始)
-        self.firingTime = np.zeros(self.N)                # 记录放电时间(上次放电)
+        self.firingTime = np.zeros(self.N)                     # 记录放电时间(上次放电)
+        # 初始化峰值时间记录相关变量
+        self.max_spikes = 1000                                 # 假设每个神经元最多记录 1000 次放电
+        self.spike_times = np.full((self.N, self.max_spikes), np.nan)
+        self.spike_counts = np.zeros(self.N, dtype=np.int32)   # 放电次数计数
 
     def __call__(self, Io=0, axis=[0]):
         """
@@ -86,14 +86,18 @@ class Neurons:
             axis: 需要加上外部激励的维度
                 list
         """
-        # I = np.zeros((self.N_vars, self.N))
-        # I[axis, :] += Io
+        I = np.zeros((self.N_vars, self.N))
+        I[axis, :] += Io
 
-        # params_list = list(self.params_nodes.values())
-        # self.method(model, self.vars_nodes, self.t, self.dt, I, params_list)  #
+        params_list = list(self.params_nodes.values())
+        self.method(model, self.vars_nodes, self.t, self.dt, I, params_list)  #
 
-        # if self.spiking: 
-        #     self._spikes_eval(self.vars_nodes[0], self.params_f, self.flag, self.flaglaunch, self.firingTime)  # 放电测算
+        if self.spiking: 
+            self._spikes_eval(self.vars_nodes[0], self.t, self.th_up, self.th_down, self.flag, self.flaglaunch, self.firingTime)  # 放电测算
+
+            if self.record_spike_times:
+                # 调用单独的记录峰值时间的函数
+                self._record_spike_times(self.flaglaunch, self.t, self.spike_times, self.spike_counts, self.max_spikes)
 
         self.t += self.dt  # 时间前进
 
@@ -101,9 +105,66 @@ class Neurons:
         """
             用于自定义所有状态变量的值
         """
-        self.vars_nodes[0] = vars_vals[0]*np.ones(self.N)
-        self.vars_nodes[1] = vars_vals[1]*np.ones(self.N)
+        for i, val in enumerate(vars_vals):
+            self.vars_nodes[i] = val
 
+    def fun_switch(self):
+        """
+            功能开关
+        """
+        self.spiking = True                 # spiking 计算
+        self.record_spike_times = False     # 记录spiking时间
+    
+    def fun_sets(self):
+        """
+            功能集合
+        """
+        self._spikes_eval = spikes_eval                 # spiking 计算函数
+        self._record_spike_times = record_spike_times   # 记录spiking时间函数
+
+    def return_spike_times(self):
+        """
+            返回有效的spiking时间
+        """
+        if not self.record_spike_times:
+            raise ValueError("未启用峰值时间记录功能，无法返回spiking时间。")
+        
+        valid_spike_times = [self.spike_times[i, ~np.isnan(self.spike_times[i])] for i in range(self.N)]
+
+        return valid_spike_times
+    
+    def cal_isi(self):
+        """
+            计算每个神经元的有效 ISI（脉冲间隔），去除 NaN 值，保留相同长度的 ISI 数组。
+
+            返回：
+                isi_array (ndarray): 二维数组，形状为 (N, max_valid_isi_count)，包含每个神经元的 ISI，未使用的元素填充为 0。
+        """
+        if not self.record_spike_times:
+            raise ValueError("未启用峰值时间记录功能，无法计算 ISI。")
+
+        isi_array = calculate_isi(self.spike_times, self.spike_counts, self.N)
+        
+        return isi_array
+    
+    def cal_cv(self):
+        """
+            计算每个神经元的有效 CV
+            变异系数 The coefficient of variation (CV)
+                CV=1，会得到泊松尖峰序列（稀疏且不连贯的尖峰）。
+                CV<1，尖峰序列变得更加规则，并且对于周期性确定性尖峰，CV 趋近与0。
+                CV>1，对应于比泊松过程变化更大的尖峰点过程。
+
+            返回：
+                cv_array (ndarray): 一维数组，长度为 N，包含每个神经元的 CV，未使用的元素填充为 0。
+        """
+        if not self.record_spike_times:
+            raise ValueError("未启用峰值时间记录功能，无法计算 CV。")   
+
+        cv_array = calculate_cv(self.spike_times, self.spike_counts, self.N)
+
+        return cv_array
+    
 @njit
 def model(vars, t, I, params):
     res = np.zeros_like(vars)
@@ -128,7 +189,94 @@ def spikes_eval(mem, t, th_up, th_down, flag, flaglaunch, firingTime):
 
     #  -------------------- 放电结束 -------------------
     firing_endPlace = np.where((mem < th_down) & (flag == 1))   # 放电结束的位置
-    flag[firing_endPlace] = 0                                   # 放电标志改为放电
+    flag[firing_endPlace] = 0  
+    
+@njit
+def record_spike_times(flaglaunch, t, spike_times, spike_counts, max_spikes):
+    """
+        记录峰值时间的函数，使用 njit 加速。
+
+        参数：
+            flaglaunch (ndarray): 刚开始放电的神经元标志数组。
+            t (float): 当前时间。
+            spike_times (ndarray): 存储峰值时间的二维数组。
+            spike_counts (ndarray): 每个神经元已记录的峰值次数。
+            max_spikes (int): 每个神经元最多记录的峰值次数。
+    """
+    N = flaglaunch.shape[0]
+    for i in range(N):
+        if flaglaunch[i] > 0.9 and spike_counts[i] < max_spikes:
+            spike_times[i, spike_counts[i]] = t
+            spike_counts[i] += 1
+
+@njit
+def calculate_isi(spike_times, spike_counts, N):
+    """
+    通过峰值时间计算有效的 ISI。
+
+    参数：
+        spike_times (ndarray): 二维数组，形状为 (N, max_spikes)，存储峰值时间。
+        spike_counts (ndarray): 一维数组，长度为 N，记录每个神经元已记录的峰值次数。
+        N (int): 神经元数量。
+
+    返回：
+        isi_array (ndarray): 二维数组，形状为 (N, max_spikes - 1)，包含每个神经元的 ISI，未使用的元素填充为 np.nan。
+    """
+    # 计算每个神经元的有效 ISI 数量
+    isi_counts = np.maximum(spike_counts - 1, 0)
+
+    # 找到最大有效 ISI 数量
+    max_valid_isi_count = np.max(isi_counts)
+    
+    # 初始化 isi_array，使用 0 填充
+    isi_array = np.full((N, max_valid_isi_count), np.nan)
+
+    for i in range(N):
+        count = spike_counts[i]
+        if count > 1:
+            # 提取有效的峰值时间
+            valid_spike_times = spike_times[i, :count]
+            # 计算 ISI
+            isi = np.diff(valid_spike_times)
+            # 将 ISI 左对齐放入 isi_array 中
+            isi_array[i, :isi.size] = isi
+        # 如果 count <= 1，isi_array[i, :] 保持为 0
+    
+    return isi_array
+
+@njit
+def calculate_cv(spike_times, spike_counts, N):
+    """
+        计算每个神经元的 CV（变异系数）。
+
+        参数：
+            spike_times (ndarray): 二维数组，形状为 (N, max_spikes)，存储峰值时间。
+            spike_counts (ndarray): 一维数组，长度为 N，记录每个神经元已记录的峰值次数。
+            N (int): 神经元数量。
+
+        返回：
+            cv_array (ndarray): 一维数组，长度为 N，每个元素是对应神经元的 CV 值。
+    """
+    cv_array = np.full(N, np.nan)
+
+    for i in range(N):
+        count = spike_counts[i]
+        if count > 1:
+            sum_isi = 0.0
+            sum_isi_sq = 0.0
+            for j in range(count - 1):
+                isi = spike_times[i, j + 1] - spike_times[i, j]
+                sum_isi += isi
+                sum_isi_sq += isi * isi
+            mean_isi = sum_isi / (count - 1)
+            var_isi = sum_isi_sq / (count - 1) - mean_isi * mean_isi
+            std_isi = np.sqrt(var_isi)
+                
+            if mean_isi != 0:
+                cv = std_isi / mean_isi
+                cv_array[i] = cv
+
+    return cv_array
 
 
 # ================================= 一般nodes的基类 =================================
@@ -151,12 +299,10 @@ class Nodes:
         self.dt = dt
         # 选择数值计算方法
         self.method = method
-        method_options = ["euler", "rk4", "discrete"]
-        if method not in method_options:
-            raise ValueError(f"无效选择，method在{method_options}选择")
-        if method == "euler":   self.method = Euler
-        elif method == "rk4":   self.method = RK4
-        elif method == "discrete":   self.method = discrete
+        method_map = {"euler": Euler, "rk4": RK4, "discrete": discrete}
+        if method not in method_map:
+            raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
+        self.method = method_map[method]
 
         self._params_f()
         self._vars_f()
@@ -190,8 +336,8 @@ class Nodes:
         """
             用于自定义所有状态变量的值
         """
-        self.vars_nodes[0] = vars_vals[0]*np.ones(self.N)
-        self.vars_nodes[1] = vars_vals[1]*np.ones(self.N)
+        for i, val in enumerate(vars_vals):
+            self.vars_nodes[i] = val
 
 @njit
 def model(vars, t, I, params):
@@ -224,12 +370,10 @@ class Synapse:
     def __init__(self, pre, post, conn=None, synType="electr", method="euler"):
         # 选择数值计算方法
         self.method = method
-        method_options = ["euler", "rk4", "discrete"]
-        if method not in method_options:
-            raise ValueError(f"无效选择，method在{method_options}选择")
-        if method == "euler":   self.method = Euler
-        elif method == "rk4":   self.method = RK4
-        elif method == "discrete":   self.method = discrete
+        method_map = {"euler": Euler, "rk4": RK4, "discrete": discrete}
+        if method not in method_map:
+            raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
+        self.method = method_map[method]
 
         # 选择突触类型
         self.synType = synType

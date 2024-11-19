@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 from numba import njit, prange
 import random
 from base_mods import Neurons
-from utils.utils_f import spikevent
 
 # np.random.seed(2024)
 # random.seed(2024)
@@ -51,8 +50,8 @@ class Rulkov(Neurons):
         vars_nodes (numpy.ndarray): 节点模型状态变量
         t (float): 模拟的理论时间
     """
-    def __init__(self, N, method="discrete", dt=1, spiking=True):
-        super().__init__(N, method, dt, spiking)
+    def __init__(self, N, method="discrete", dt=1):
+        super().__init__(N, method, dt)
         # self.N = N  # 神经元数量
         # self.dt = dt
         # self.method = method
@@ -99,21 +98,19 @@ class Rulkov(Neurons):
         if self.spiking: 
             self._spikes_eval(self.vars_nodes[0], self.t, self.th_up, self.th_down, self.flag, self.flaglaunch, self.firingTime)  # 放电测算
 
-        self.t += 1  # 时间前进
+            if self.record_spike_times:
+                # 调用单独的记录峰值时间的函数
+                self._record_spike_times(self.flaglaunch, self.t, self.spike_times, self.spike_counts, self.max_spikes)
 
-    def set_vars_vals(self, vars_vals=[0, 0]):
-        """
-            用于自定义所有状态变量的值
-        """
-        self.vars_nodes[0] = vars_vals[0]*np.ones(self.N)
-        self.vars_nodes[1] = vars_vals[1]*np.ones(self.N)
+        self.t += 1  # 时间前进
 
 
 if __name__ == "__main__": 
     N = 2
     nodes = Rulkov(N=N)  # , temperature=6.3
     nodes.params_nodes["alpha"] = 4.1
-    spiker = spikevent(N)
+    # nodes.set_vars_vals([0])
+    # print(nodes.vars_nodes)
 
     time = []
     mem = []
@@ -121,16 +118,20 @@ if __name__ == "__main__":
     for i in range(3000):
         nodes()
 
+    nodes.record_spike_times = True
     for i in range(2000):
         nodes()
         time.append(nodes.t)
         mem.append(nodes.vars_nodes[0].copy())
-        spiker(nodes.t, nodes.flaglaunch)
+    
+    valid_spike_times = nodes.return_spike_times()
+    # print(valid_spike_times)
+    # print(nodes.cal_isi())
+    print(nodes.cal_cv())
 
     ax1 = plt.subplot(211)
     plt.plot(time, mem)
     plt.subplot(212, sharex=ax1)
-    spiker.pltspikes()
-    # print(se.Tspike_list)
+    plt.eventplot(valid_spike_times)
 
     plt.show()

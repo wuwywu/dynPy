@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 from numba import njit, prange
 import random
 from base_mods import Neurons
-from utils.utils_f import spikevent
 
 # np.random.seed(2024)
 # random.seed(2024)
@@ -118,15 +117,11 @@ class Iz(Neurons):
 
         thresh, c, d = self.params_nodes["threshold"], self.params_nodes["c"], self.params_nodes["d"]
         spike_eval(self.vars_nodes, self.t, thresh, self.flaglaunch, self.firingTime, c, d)
+        if self.record_spike_times:
+            # 调用单独的记录峰值时间的函数
+            self._record_spike_times(self.flaglaunch, self.t, self.spike_times, self.spike_counts, self.max_spikes)
 
         self.t += self.dt  # 时间前进
-
-    def set_vars_vals(self, vars_vals=[0, 0]):
-        """
-            用于自定义所有状态变量的值
-        """
-        self.vars_nodes[0] = vars_vals[0]*np.ones(self.N)
-        self.vars_nodes[1] = vars_vals[1]*np.ones(self.N)
         
 
 if __name__ == "__main__":
@@ -134,21 +129,29 @@ if __name__ == "__main__":
     method = "euler"               # "rk4", "euler"
     nodes = Iz(N=N, method=method)  # , temperature=6.3
     nodes.params_nodes["Iex"] = 20.
-    spiker = spikevent(N)
+    # nodes.set_vars_vals([0])
+    # print(nodes.vars_nodes)
 
     time = []
     mem = []
 
     for i in range(100_00):
         nodes()
+        
+    nodes.record_spike_times = True
+    for i in range(100_00):
+        nodes()
         time.append(nodes.t)
         mem.append(nodes.vars_nodes[0].copy())
-        spiker(nodes.t, nodes.flaglaunch)
+
+    valid_spike_times = nodes.return_spike_times()
+    # print(valid_spike_times)
+    # print(nodes.cal_isi())
+    print(nodes.cal_cv())
 
     ax1 = plt.subplot(211)
     plt.plot(time, mem)
     plt.subplot(212, sharex=ax1)
-    spiker.pltspikes()
-    # print(se.Tspike_list)
+    plt.eventplot(valid_spike_times)
 
     plt.show()

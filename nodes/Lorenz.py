@@ -86,20 +86,14 @@ class Lorenz(Nodes):
 
         self.t += self.dt  # 时间前进
 
-    def set_vars_vals(self, vars_vals=[0, 0, 0]):
-        """
-            用于自定义所有状态变量的值
-        """
-        self.vars_nodes[0] = vars_vals[0]*np.ones(self.N)
-        self.vars_nodes[1] = vars_vals[1]*np.ones(self.N)
-        self.vars_nodes[2] = vars_vals[2]*np.ones(self.N)
-
 
 if __name__ == "__main__":
     N = 2
     dt = 0.01
     method = "rk4"  # "rk4", "euler"
     nodes = Lorenz(N=N, method=method, dt=dt)
+    # nodes.set_vars_vals([0])
+    # print(nodes.vars_nodes)
 
     time = []
     mem = []
