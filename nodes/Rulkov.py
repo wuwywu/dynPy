@@ -44,7 +44,6 @@ class Rulkov(Neurons):
         N : 建立神经元的数量
         method : 计算非线性微分方程的方法，(""discrete")
         dt : 计算步长(dt=1)
-        spiking : 是否计算神经元的放电（True, False）
 
         params_nodes (dict): 节点模型参数
         vars_nodes (numpy.ndarray): 节点模型状态变量

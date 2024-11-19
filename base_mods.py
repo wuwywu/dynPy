@@ -270,11 +270,14 @@ def calculate_cv(spike_times, spike_counts, N):
                 sum_isi_sq += isi * isi
             mean_isi = sum_isi / (count - 1)
             var_isi = sum_isi_sq / (count - 1) - mean_isi * mean_isi
+            var_isi = np.abs(var_isi)
             std_isi = np.sqrt(var_isi)
                 
             if mean_isi != 0:
                 cv = std_isi / mean_isi
                 cv_array[i] = cv
+            else:
+                cv_array[i] = 0
 
     return cv_array
 

@@ -70,7 +70,6 @@ class HH(Neurons):
         N : 建立神经元的数量
         method : 计算非线性微分方程的方法，（"euler", "rk4"）
         dt : 计算步长
-        spiking : 是否计算神经元的放电（True, False）
         temperature: 温度(℃)
 
         params_nodes (dict): 节点模型参数
@@ -147,9 +146,6 @@ if __name__ == "__main__":
     time = []
     mem = []
 
-    for i in range(100_00):
-        nodes()
-
     nodes.record_spike_times = True
     for i in range(100_00):
         nodes()
@@ -158,9 +154,7 @@ if __name__ == "__main__":
 
     valid_spike_times = nodes.return_spike_times()
     # print(valid_spike_times)
-    # print(nodes.cal_isi())
-    print(nodes.cal_cv())
-
+    # print
     ax1 = plt.subplot(211)
     plt.plot(time, mem)
     plt.subplot(212, sharex=ax1)
