@@ -7,8 +7,15 @@
 # 1、节点动力学基础模块(神经元，一般节点)
 # 2、突触动力学基础模块
 # 3、数值模拟算法(欧拉，龙格库塔，离散)
-# 4、常用的工具函数(延迟存储器)
+# 4、常用的工具函数(延迟存储器, 连接矩阵to拉普拉斯矩阵)
 
+"""
+    神经元基础模块包含的功能：
+        1、计算ISI (cal_isi)
+        2、计算CV (cal_cv)
+        3、计算Kuramoto Order Parameter (cal_kop)
+        注：这些功能使用前需要打开峰值时间记录器(record_spike_times = True)
+"""
 
 import os
 import sys
@@ -24,16 +31,18 @@ import random
 
 # ================================= 神经元模型的基类 =================================
 """
-注：
-    1、模拟的理论时间 : t
-    2、模拟的时间步长 : dt
-    3、神经元基团数量 : N
-关于放电：
-    4、放电开始的阈值 : th_up
-    5、放电结束的阈值 : th_down
-    6、放电的标志 flag (只要大于0就处于放电过程中)
-    7、放电开启的标志 flaglaunch (只有在放电的时刻为1， 其他时刻为0)
-    8、放电的时间 firingTime (与放电的标志时刻一致)
+    注：
+        1、模拟的理论时间 : t
+        2、模拟的时间步长 : dt
+        3、神经元基团数量 : N
+    关于放电：
+        4、放电开始的阈值 : th_up
+        5、放电结束的阈值 : th_down
+        6、放电的标志 flag (只要大于0就处于放电过程中)
+        7、放电开启的标志 flaglaunch (只有在放电的时刻为1， 其他时刻为0)
+        8、放电的时间 firingTime (与放电的标志时刻一致)
+        9、峰值时间记录器 spike_times (size: [N, max_spikes])
+        10、峰值时间计数器 spike_counts (size: [N])
 """
 class Neurons:
     """
@@ -165,7 +174,7 @@ class Neurons:
 
         return cv_array
     
-    def calculate_kop(self, min_spikes=10):
+    def cal_kop(self, min_spikes=10):
         """
             调用 Kuramoto Order Parameter 计算。
             返回：

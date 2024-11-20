@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # print(nodes.cal_isi())
     print(nodes.cal_cv())
 
-    kop_list = nodes.calculate_kop(min_spikes=10)
+    kop_list = nodes.cal_kop(min_spikes=10)
     first_last_spk, last_first_spk = kop_list[-1]  
     print(kop_list[0])
 
