@@ -9,3 +9,5 @@ from synapse.synapse_sigmoidal import *
 from connect.BA_scale_free import *
 from base_mods import *
 from analys.statis.statis_sync import *
+
+from analys.Lyapunov.Lyapunov_delay_jit import *

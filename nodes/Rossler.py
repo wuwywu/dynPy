@@ -1,10 +1,10 @@
 # encoding: utf-8
 # Author    : WuY<wuyong@mails.ccnu.edu.com>
-# Datetime  : 2024/11/16
+# Datetime  : 2024/11/20
 # User      : WuY
-# File      : Lorenz.py
-# Lorenz system 模型
-# refernce : E.N. Lorenz, Deterministic nonperiodic fow, J. Atmos. Sci. 20, 130-141 (1963).
+# File      : Rossler.py
+# Rössler system 模型
+# refernce : O.E. Rössler, An equation for continuous chaos, Phys. Lett. A 57(5), 397-398 (1976).
 
 import os
 import sys
@@ -21,18 +21,17 @@ from base_mods import Nodes
 
 
 @njit
-def Lorenz_model(vars, t, I, params):
+def Rossler_model(vars, t, I, params):
     res = np.zeros_like(vars)
     # 常数参数
-    sigma, rho, beta = params
-
+    alpha, beta, gamma = params
     # 状态变量
     x, y, z = vars
 
     # 变量的导数
-    dx_dt = sigma * (y - x) + I[0] 
-    dy_dt = x * (rho - z) - y + I[1]
-    dz_dt = x * y - beta * z + I[2]
+    dx_dt = -y - z + I[0]
+    dy_dt = x + alpha * y + I[1]
+    dz_dt = beta + z * (x - gamma) + I[2]
 
     # 输出结果
     res[0] = dx_dt
@@ -41,7 +40,8 @@ def Lorenz_model(vars, t, I, params):
 
     return res
 
-class Lorenz(Nodes):
+
+class Rossler(Nodes):
     """
         N : 建立神经元的数量
         method : 计算非线性微分方程的方法，("euler", "rk4")
@@ -51,7 +51,7 @@ class Lorenz(Nodes):
         vars_nodes (numpy.ndarray): 节点模型状态变量
         t (float): 模拟的理论时间
     """
-    def __init__(self, N=1, method="euler", dt=0.01):
+    def __init__(self, N=1, method="euler", dt=.01):
         super().__init__(N, method, dt)
         # self.N = N  # 神经元数量
         # self.dt = dt
@@ -60,11 +60,12 @@ class Lorenz(Nodes):
         self._vars()
 
     def _params(self):
+        # 常数参数
         self.params_nodes = {
-            "sigma": 10.,
-            "rho": 28.,
-            "beta": 8 / 3,
-        } 
+            "alpha": 0.2,
+            "beta": 0.2,
+            "gamma": 9.,
+        }
 
     def _vars(self):
         self.t = 0.  # 运行时间
@@ -91,7 +92,7 @@ class Lorenz(Nodes):
         I[axis, :] += Io
 
         params_list = list(self.params_nodes.values())
-        self.method(Lorenz_model, self.vars_nodes, self.t, self.dt, I, params_list)  #
+        self.method(Rossler_model, self.vars_nodes, self.t, self.dt, I, params_list)  #
 
         self.t += self.dt  # 时间前进
 
@@ -100,14 +101,19 @@ if __name__ == "__main__":
     N = 2
     dt = 0.01
     method = "rk4"  # "rk4", "euler"
-    nodes = Lorenz(N=N, method=method, dt=dt)
-    # nodes.set_vars_vals([0])
+    nodes = Rossler(N=N, method=method, dt=dt)
+    nodes.set_vars_vals([0.1, 0.1, 0.1])
     # print(nodes.vars_nodes)
+
+    for i in range(200_00):
+        nodes()
+
+    nodes.vars_nodes[0, 0] += 1e-3
 
     time = []
     mem = []
 
-    for i in range(100_00):
+    for i in range(200_00):
         nodes()
         time.append(nodes.t)
         mem.append(nodes.vars_nodes[0].copy())

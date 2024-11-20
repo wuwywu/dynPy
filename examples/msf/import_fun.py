@@ -6,3 +6,8 @@ sys.path.append(r"../../")
 from analys.Lyapunov.Lyapunov_delay_jit import *
 from analys.Lyapunov.Lyapunov_jit import *
 from analys.Lyapunov.msf_jit import *
+# 节点
+from nodes.Lorenz import *
+from nodes.HH import *
+# 基础模块
+from base_mods import *

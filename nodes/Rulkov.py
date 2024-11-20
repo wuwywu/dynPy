@@ -42,7 +42,7 @@ def Rulkov_model(vars, t, I, params):
 class Rulkov(Neurons):
     """
         N : 建立神经元的数量
-        method : 计算非线性微分方程的方法，(""discrete")
+        method : 计算非线性微分方程的方法，("discrete")
         dt : 计算步长(dt=1)
 
         params_nodes (dict): 节点模型参数
