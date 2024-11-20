@@ -139,7 +139,7 @@ if __name__ == "__main__":
         nodes()
         
     nodes.record_spike_times = True
-    for i in range(100_00):
+    for i in range(500_00):
         nodes()
         time.append(nodes.t)
         mem.append(nodes.vars_nodes[0].copy())
@@ -148,10 +148,16 @@ if __name__ == "__main__":
     # print(valid_spike_times)
     # print(nodes.cal_isi())
     print(nodes.cal_cv())
+    
+    kop_list = nodes.calculate_kop(min_spikes=10)
+    first_last_spk, last_first_spk = kop_list[-1]  
+    print(kop_list[0])
 
-    ax1 = plt.subplot(211)
+    ax1 = plt.subplot(311)
     plt.plot(time, mem)
-    plt.subplot(212, sharex=ax1)
+    plt.subplot(312, sharex=ax1)
     plt.eventplot(valid_spike_times)
+    plt.subplot(313, sharex=ax1)
+    plt.plot(np.linspace(first_last_spk, last_first_spk, kop_list[2].shape[1]), kop_list[2].T)
 
     plt.show()
