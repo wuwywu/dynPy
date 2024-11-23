@@ -58,7 +58,7 @@ class Neurons:
         self.N = N  # 神经元数量
         self.dt = dt
         # 选择数值计算方法
-        self.method = method
+        self._method = method
         method_map = {"euler": Euler, "rk4": RK4, "discrete": discrete}
         if method not in method_map:
             raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
@@ -114,8 +114,9 @@ class Neurons:
         """
             用于自定义所有状态变量的值
         """
+        self._vars()
         for i, val in enumerate(vars_vals):
-            self.vars_nodes[i] = val
+            self.vars_nodes[i] = val * np.ones(self.N)
 
     def fun_switch(self):
         """

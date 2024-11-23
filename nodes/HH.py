@@ -140,7 +140,9 @@ if __name__ == "__main__":
     method = "euler"               # "rk4", "euler"
     nodes = HH(N=N, method=method)  # , temperature=6.3
     nodes.params_nodes["Iex"] = 10.
-    # nodes.set_vars_vals([0])
+    # nodes.N = 3
+    # nodes.set_vars_vals([0, 0, 0, 0])
+    # nodes._vars_f()
     # print(nodes.vars_nodes)
 
     time = []
