@@ -115,6 +115,7 @@ class Neurons:
             用于自定义所有状态变量的值
         """
         self._vars()
+        self._vars_f()
         for i, val in enumerate(vars_vals):
             self.vars_nodes[i] = val * np.ones(self.N)
 
@@ -336,7 +337,7 @@ def calculate_kuramoto(spike_times, dt, min_spikes=0):
  
     # 检查是否存在有效神经元
     if len(first_spikes) == 0 or len(last_spikes) == 0:
-        raise ValueError("没有满足条件的神经元，请检查输入数据或降低 min_spikes 的值！")
+        raise ValueError("没有满足条件的神经元放电的最小值，请检查输入数据或降低 min_spikes 的值！")
     
     first_spikes = np.array(first_spikes, dtype=np.float64)
     last_spikes = np.array(last_spikes, dtype=np.float64)

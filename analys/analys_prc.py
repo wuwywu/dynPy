@@ -276,7 +276,6 @@ class phase_shift:
 
         # 初始化 `节点初始值`，`初始时间` 和 `节点数量`；给出振荡周期
         self.nodes.N = self.N
-        self.nodes._vars_f()
         self.nodes.set_vars_vals(vars_vals=vars_init)
         self.nodes.t = 0.  # 初始化运行时间
 
@@ -459,7 +458,6 @@ class Phase_Response_Curves:
 
         # 初始化 `节点初始值`，`初始时间` 和 `节点数量`；给出振荡周期
         self.nodes.N = self.N
-        self.nodes._vars_f()
         self.nodes.set_vars_vals(vars_vals=vars_init)
         self.nodes.t = 0.  # 初始化运行时间
 
