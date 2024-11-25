@@ -666,6 +666,7 @@ def delay(x, k, delayLong, delay):
 
     return delay_o, k
 
+
 # ========= 连接矩阵to拉普拉斯矩阵 =========
 @njit
 def to_laplacian(adjacency_matrix):
@@ -676,4 +677,72 @@ def to_laplacian(adjacency_matrix):
     degree_matrix = np.diag(np.sum(adjacency_matrix, axis=1))
     laplacian_matrix = degree_matrix - adjacency_matrix
     return laplacian_matrix
+
+
+# ========= 噪声 =========
+class noiser:
+    """
+        噪声产生
+        D_noise:    噪声强度
+        dt:         计算步步长
+        N:          要产生噪声的尺度，可以是整数或元组
+        type:       噪声类型，可选：["white"、"color"]
+        lam_color:  色噪声的相关率
+    """
+    def __init__(self, D_noise, dt, N, type="white", lam_color=0.1):
+        self.D_noise = D_noise
+        self.dt = dt
+        self.N = N
+        self.lam_color = lam_color
+
+        self.type = type
+        type_map = {"white": Gaussian_white_noise, "color": Gaussian_colour_noise}
+        if type not in type_map:
+            raise ValueError(f"无效选择，type 必须是 {list(type_map.keys())}")
+        self.noisee = type_map[type]
+
+        # 初始化噪声
+        self.noise = dt*np.random.normal(loc=0., scale=np.sqrt(D_noise*lam_color), size=N)
+
+    def __call__(self):
+        """
+            产生噪声
+        """
+        if self.type == "white":
+            self.noise = self.noisee(self.D_noise, self.noise, self.dt, self.N)
+        elif self.type == "color":
+            self.noise = self.noisee(self.D_noise, self.noise, self.dt, self.N, self.lam_color)
+
+@njit
+def Gaussian_white_noise(D_noise, noise, dt, size):
+    """
+        高斯白噪声
+        D_noise:    噪声强度
+        dt:         计算步步长
+        size:       要产生噪声的尺度，可以是整数或元组
+    """
+    # a = np.random.rand(size)
+    # b = np.random.rand(size)
+    # noise = np.sqrt(-4*D_noise*dt*np.log(a)) * np.cos(2*np.pi*b)
+    noise = np.random.normal(loc=0., scale=np.sqrt(2*D_noise*dt), size=size)
+    return noise
+
+@njit
+def Gaussian_colour_noise(D_noise, noise, dt, size, lam_color):
+    """
+        高斯色噪声
+        D_noise:    噪声强度
+        noise:      上一步的噪声
+        dt:         计算步步长
+        size:       要产生噪声的尺度，可以是整数或元组
+        lam_color:  色噪声的相关率
+    """
+    # a = np.random.rand(size)
+    # b = np.random.rand(size)
+    # g_w = np.sqrt(-4*D_noise*dt*np.log(a)) * np.cos(2*np.pi*b)
+    g_w = np.random.normal(loc=0., scale=np.sqrt(2*D_noise*dt), size=size) 
+    noise = noise - dt * lam_color * noise + lam_color*g_w
+    noise = dt * noise
+
+    return noise
 
