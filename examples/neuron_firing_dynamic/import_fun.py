@@ -6,4 +6,5 @@ sys.path.append(r"../../")
 
 from nodes.HH import *
 from nodes.Iz import *
+from nodes.FHN import *
 from base_mods import *

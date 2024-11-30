@@ -36,7 +36,7 @@ def Iz_model(vars, t, I, params):
     return res
 
 @njit
-def spike_eval(var, t, thresh, flaglaunch, firingTime, c, d):
+def spikes_eval_Iz(var, t, thresh, flaglaunch, firingTime, c, d):
     """
         计算神经元是否发放脉冲
     """
@@ -116,7 +116,7 @@ class Iz(Neurons):
         self.method(Iz_model, self.vars_nodes, self.t, self.dt, I, params_list)  #
 
         thresh, c, d = self.params_nodes["threshold"], self.params_nodes["c"], self.params_nodes["d"]
-        spike_eval(self.vars_nodes, self.t, thresh, self.flaglaunch, self.firingTime, c, d)
+        spikes_eval_Iz(self.vars_nodes, self.t, thresh, self.flaglaunch, self.firingTime, c, d)
         if self.record_spike_times:
             # 调用单独的记录峰值时间的函数
             self._record_spike_times(self.flaglaunch, self.t, self.spike_times, self.spike_counts, self.max_spikes)
