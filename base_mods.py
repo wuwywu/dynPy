@@ -746,3 +746,68 @@ def Gaussian_colour_noise(D_noise, noise, dt, size, lam_color):
 
     return noise
 
+
+# ========= 极大极小值 =========
+@njit
+def find_extrema(time_series_matrix):
+    """
+        对多个时间序列矩阵中的每个时间序列，逐个求取极大值和极小值，并返回填充为统一维度的结果。
+        
+        参数:
+            time_series_matrix: 二维数组，形状为(N, T)，包含N个时间序列，每个时间序列有T个时间步。
+        
+        返回:
+            maxima_values (N, max_maxima_len): 极大值
+            maxima_indices (N, max_maxima_len): 极大值索引
+            minima_values (N, max_minima_len): 极小值
+            minima_indices (N, max_minima_len): 极小值索引
+    """
+    N, T = time_series_matrix.shape
+    
+    # 初始化存储极大值和极小值的列表
+    maxima_values_list = []
+    maxima_indices_list = []
+    minima_values_list = []
+    minima_indices_list = []
+    
+    for i in range(N):
+        time_series = time_series_matrix[i]
+        
+        # 查找极大值和极小值的索引
+        maxima_indices = np.where((time_series[1:-1] > time_series[:-2]) & (time_series[1:-1] > time_series[2:]))[0] + 1
+        minima_indices = np.where((time_series[1:-1] < time_series[:-2]) & (time_series[1:-1] < time_series[2:]))[0] + 1
+        
+        # 获取对应的极大值和极小值
+        maxima_values = time_series[maxima_indices]
+        minima_values = time_series[minima_indices]
+        
+        # 将极值和索引填充到统一长度的数组中
+        maxima_values_list.append(maxima_values)
+        maxima_indices_list.append(maxima_indices)
+        minima_values_list.append(minima_values)
+        minima_indices_list.append(minima_indices)
+
+    # 手动计算最大长度，用于填充
+    max_maxima_len = 0
+    max_minima_len = 0
+    for max_vals in maxima_values_list:
+        if len(max_vals) > max_maxima_len:
+            max_maxima_len = len(max_vals)
+    for min_vals in minima_values_list:
+        if len(min_vals) > max_minima_len:
+            max_minima_len = len(min_vals)
+    
+    # 填充每个时间序列的极大值和极小值，确保它们具有相同长度
+    maxima_values_array = np.full((N, max_maxima_len), np.nan)
+    maxima_indices_array = np.full((N, max_maxima_len), np.nan)
+    minima_values_array = np.full((N, max_minima_len), np.nan)
+    minima_indices_array = np.full((N, max_minima_len), np.nan)
+    
+    for i in range(N):
+        maxima_values_array[i, :len(maxima_values_list[i])] = maxima_values_list[i]
+        maxima_indices_array[i, :len(maxima_indices_list[i])] = maxima_indices_list[i]
+        minima_values_array[i, :len(minima_values_list[i])] = minima_values_list[i]
+        minima_indices_array[i, :len(minima_indices_list[i])] = minima_indices_list[i]
+    
+    return maxima_values_array, maxima_indices_array, minima_values_array, minima_indices_array
+
