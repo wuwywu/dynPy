@@ -147,6 +147,28 @@ def tau_peak_function(tau_r, tau_d, tau_d_q, dt):
     return tau_peak_new
 
 
+# =========================== PRC 所使用的脉冲形式 ==========================
+@njit
+def generate_pulses(current_time, ts, pulse_widths=1.):
+    """
+        根据当前时间和给定的多个脉冲起始时间及宽度输出脉冲值（1 或 0）
+        current_time: 当前时间
+        ts: 脉冲开始的时间列表
+        pulse_widths: 脉冲的宽度列表，可以是单个值或多个值
+    """
+    ts = np.asarray(ts)
+
+    # 如果 pulse_widths 是一个单一值，将其扩展为与 t_starts 长度相同的列表
+    if isinstance(pulse_widths, (int, float)):
+        pulse_widths = np.full_like(ts, pulse_widths)
+    else:
+        pulse_widths = np.asarray(pulse_widths)  # 将 pulse_widths 转换为 NumPy 数组
+    
+    # 使用 NumPy 向量化计算
+    pulse_ends = ts + pulse_widths  # 计算每个脉冲的结束时间
+    pulse_values = (ts <= current_time) & (current_time < pulse_ends)  # 判断是否在脉冲区间内
+    return pulse_values.astype(np.int32)  # 将布尔值转换为 0 或 1
+
 # =========================== 神经元的相位漂移 ==========================
 class phase_shift:
     """
@@ -165,14 +187,20 @@ class phase_shift:
             mem_no_in           : 没有输入脉冲时，膜电位的变化
             mem_in              : 有输入脉冲时，膜电位的变化
     """
-    def __init__(self, nodes, phase=[0.5], syn_tau_peak=0.5, syn_tau_r=0.5, syn_tau_d=2.0):
+    def __init__(self, nodes, phase=[0.5], pulses=False, syn_tau_peak=0.5, syn_tau_r=0.5, syn_tau_d=2.0):
         self.nodes = nodes                            # 输入节点
         self.N = len(phase)
         self.dt = self.nodes.dt
         self._method = self.nodes._method
-        self.syn_in = syn_prc(self.N, dt=self.dt, method=self._method, tau_peak=syn_tau_peak)       # 实例化输入突触
-        self.syn_in.params_syn["tau_r"] = syn_tau_r
-        self.syn_in.params_syn["tau_d"] = syn_tau_d
+
+        self.pulses = pulses
+        if self.pulses:
+            self.syn_in = generate_pulses
+        else:
+            self.syn_in = syn_prc(self.N, dt=self.dt, method=self._method, tau_peak=syn_tau_peak)       # 实例化输入突触
+            self.syn_in.params_syn["tau_r"] = syn_tau_r
+            self.syn_in.params_syn["tau_d"] = syn_tau_d
+
         self.in_phase = np.array(phase)
         self._params()
         self._vars()
@@ -182,6 +210,8 @@ class phase_shift:
         self.T_init =10000      # 初始化节点时间
         self.e = 0.             # 化学突触的平衡电位
         self.g_syn = 0.1        # 突触的最大电导
+
+        self.pulses_width = 1.  # 脉冲宽度
 
         self.th_up = self.nodes.th_up       # 放电阈值
         self.th_down = self.nodes.th_down   # 放电阈下值
@@ -204,7 +234,11 @@ class phase_shift:
         self.I_in = []
         while self.nn.min() < 9 and self.nodes.t < t_final / self.dt:
             t = self.nodes.t
-            q, s = self.syn_in(t, self.ts_list)
+            if self.pulses:
+                s = self.syn_in(t, self.ts_list, self.pulses_width)
+            else:
+                q, s = self.syn_in(t, self.ts_list)
+
             I = self.g_syn * s * (self.e - mem)
             self.I_in.append(I.copy())
             self.nodes(I)
@@ -343,15 +377,20 @@ class Phase_Response_Curves:
             ts_list :   给输入脉冲的时间
             in_phase :  给输入脉冲的的相位
     """
-    def __init__(self, nodes, N_phase=500, syn_tau_peak=0.5, syn_tau_r=0.5, syn_tau_d=2.0):
+    def __init__(self, nodes, N_phase=500, pulses=False, syn_tau_peak=0.5, syn_tau_r=0.5, syn_tau_d=2.0):
         self.in_phase = np.linspace(0, 1, N_phase)
         self.N = N_phase
         self.nodes = nodes                            # 输入节点
         self.dt = self.nodes.dt
         self._method = self.nodes._method
-        self.syn_in = syn_prc(self.N, dt=self.dt, method=self._method, tau_peak=syn_tau_peak)       # 实例化输入突触
-        self.syn_in.params_syn["tau_r"] = syn_tau_r
-        self.syn_in.params_syn["tau_d"] = syn_tau_d
+        self.pulses = pulses
+        if self.pulses:
+            self.syn_in = generate_pulses
+        else:
+            self.syn_in = syn_prc(self.N, dt=self.dt, method=self._method, tau_peak=syn_tau_peak)       # 实例化输入突触
+            self.syn_in.params_syn["tau_r"] = syn_tau_r
+            self.syn_in.params_syn["tau_d"] = syn_tau_d
+
         self._params()
         self._vars()
         self._node_init()
@@ -360,6 +399,8 @@ class Phase_Response_Curves:
         self.T_init =10000      # 初始化节点时间
         self.e = 0.             # 化学突触的平衡电位
         self.g_syn = 0.1        # 突触的最大电导
+
+        self.pulses_width = 1.  # 脉冲宽度
 
         self.th_up = self.nodes.th_up       # 放电阈值
         self.th_down = self.nodes.th_down   # 放电阈下值
@@ -380,7 +421,10 @@ class Phase_Response_Curves:
         t_final = 5000  # 最大初始时间
         while self.nn.min() < 9 and self.nodes.t < t_final / self.dt:
             t = self.nodes.t
-            q, s = self.syn_in(t, self.ts_list)
+            if self.pulses:
+                s = self.syn_in(t, self.ts_list, self.pulses_width)
+            else:
+                q, s = self.syn_in(t, self.ts_list)
             I = self.g_syn * s * (self.e - mem)
             self.nodes(I)
             self._spikes_eval(mem)  # 放电测算

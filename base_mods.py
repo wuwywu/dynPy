@@ -339,8 +339,8 @@ def calculate_kuramoto(spike_times, dt, min_spikes=0):
     if len(first_spikes) == 0 or len(last_spikes) == 0:
         raise ValueError("没有满足条件的神经元放电的最小值，请检查输入数据或降低 min_spikes 的值！")
     
-    first_spikes = np.array(first_spikes, dtype=np.float64)
-    last_spikes = np.array(last_spikes, dtype=np.float64)
+    first_spikes = np.asarray(first_spikes, dtype=np.float64)
+    last_spikes = np.asarray(last_spikes, dtype=np.float64)
 
     # 定义有效时间区间
     first_last_spk = np.max(first_spikes)  # 最早的最后一个首峰时间
