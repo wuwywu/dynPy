@@ -82,6 +82,7 @@ class HH(Neurons):
         # self.dt = dt
         # self.method = method
         self.temperature = temperature
+        self.model = HH_model  # 模型的微分方程
         self._params()
         self._vars()
 

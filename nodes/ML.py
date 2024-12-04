@@ -59,6 +59,7 @@ class ML(Neurons):
         # self.N = N  # 神经元数量
         # self.dt = dt
         # self.method = method
+        self.model = ML_model  # 模型的微分方程
         self._params()
         self._vars()
 

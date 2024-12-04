@@ -64,6 +64,8 @@ class Neurons:
             raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
         self.method = method_map[method]
 
+        self.model = model  # 模型的微分方程
+
         self.fun_switch()
         self.fun_sets()
         self._params_f()
@@ -99,7 +101,7 @@ class Neurons:
         I[axis, :] += Io
 
         params_list = list(self.params_nodes.values())
-        self.method(model, self.vars_nodes, self.t, self.dt, I, params_list)  #
+        self.method(self.model, self.vars_nodes, self.t, self.dt, I, params_list)  #
 
         if self.spiking: 
             self._spikes_eval(self.vars_nodes[0], self.t, self.th_up, self.th_down, self.flag, self.flaglaunch, self.firingTime)  # 放电测算
@@ -191,6 +193,24 @@ class Neurons:
         
         return calculate_kuramoto(self.spike_times, self.dt, min_spikes=min_spikes)
     
+    def cal_flow_field(self, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100, plt_flag=False):
+        """
+            二维平面流速场
+            select_dim: 选择的维度 (x, y)
+            vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max)
+            N    : 网格点数
+        """
+        params_list = list(self.params_nodes.values())
+        dX_dt, dY_dt, X, Y = flow_field(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N)
+
+        if plt_flag:
+            plt.streamplot(X, Y, dX_dt, dY_dt, density=1.5, linewidth=1., arrowsize=1.2, arrowstyle='->')
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.title('Vector Field')
+
+        return dX_dt, dY_dt, X, Y
+
 @njit
 def model(vars, t, I, params):
     res = np.zeros_like(vars)
@@ -811,3 +831,32 @@ def find_extrema(time_series_matrix):
     
     return maxima_values_array, maxima_indices_array, minima_values_array, minima_indices_array
 
+
+# ========= 二维平面流速场 =========
+def flow_field(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100):
+    """
+        二维平面流速场
+        fun  : 速度函数
+        params: 速度函数的参数
+        N_vars: 速度函数的变量数量
+        select_dim: 选择的维度 (x, y)
+        vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max)
+        N    : 网格点数
+    """
+    vars = np.zeros((N_vars, N, N))
+    # 生成网格
+    x_min, x_max, y_min, y_max = vars_lim
+    x = np.linspace(x_min, x_max, N)
+    y = np.linspace(y_min, y_max, N)
+    X, Y = np.meshgrid(x, y)
+
+    dim1, dim2 = select_dim
+    vars[dim1] = X
+    vars[dim2] = Y
+    
+    I = np.zeros(N_vars)
+    dvars_dt = fun(vars, 0, I, params)
+    dX_dt = dvars_dt[dim1]
+    dY_dt = dvars_dt[dim2]
+
+    return dX_dt, dY_dt, X, Y
