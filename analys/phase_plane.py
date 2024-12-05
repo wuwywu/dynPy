@@ -15,7 +15,7 @@ from numba import njit, prange
 
 
 # ================================= 二维平面流速场=================================
-def flow_field(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100):
+def flow_field2D(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100):
     """
         二维平面流速场
         fun  : 速度函数
@@ -42,3 +42,35 @@ def flow_field(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1
     dY_dt = dvars_dt[dim2]
 
     return dX_dt, dY_dt, X, Y
+
+def flow_field3D(fun, params, N_vars, select_dim=(0, 1, 2), vars_lim=(-1., 1., -1., 1., -1., 1.), N=100):
+    """
+        三维流速场
+        fun  : 速度函数
+        params: 速度函数的参数
+        N_vars: 速度函数的变量数量
+        select_dim: 选择的维度 (x, y, z)
+        vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max, z_min, z_max)
+        N    : 网格点数
+    """
+    vars = np.zeros((N_vars, N, N, N))
+    # 生成网格
+    x_min, x_max, y_min, y_max, z_min, z_max = vars_lim
+    x = np.linspace(x_min, x_max, N)
+    y = np.linspace(y_min, y_max, N)
+    z = np.linspace(z_min, z_max, N)
+    X, Y, Z = np.meshgrid(x, y, z)
+
+    dim1, dim2, dim3 = select_dim
+    vars[dim1] = X
+    vars[dim2] = Y
+    vars[dim3] = Z
+    
+    I = np.zeros(N_vars)
+    dvars_dt = fun(vars, 0, I, params)
+    dX_dt = dvars_dt[dim1]
+    dY_dt = dvars_dt[dim2]
+    dZ_dt = dvars_dt[dim3]
+
+    return dX_dt, dY_dt, dZ_dt, X, Y, Z
+

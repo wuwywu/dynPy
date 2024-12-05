@@ -23,6 +23,7 @@ sys.path.append(os.path.dirname(__file__))  # 将文件所在地址放入系统�
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from numba import njit, prange
 import random
 
@@ -193,7 +194,7 @@ class Neurons:
         
         return calculate_kuramoto(self.spike_times, self.dt, min_spikes=min_spikes)
     
-    def cal_flow_field(self, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100, plt_flag=False):
+    def cal_flow_field2D(self, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100, plt_flag=False):
         """
             二维平面流速场
             select_dim: 选择的维度 (x, y)
@@ -201,7 +202,7 @@ class Neurons:
             N    : 网格点数
         """
         params_list = list(self.params_nodes.values())
-        dX_dt, dY_dt, X, Y = flow_field(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N)
+        dX_dt, dY_dt, X, Y = flow_field2D(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N)
 
         if plt_flag:
             plt.streamplot(X, Y, dX_dt, dY_dt, density=1.5, linewidth=1., arrowsize=1.2, arrowstyle='->')
@@ -210,6 +211,18 @@ class Neurons:
             plt.title('Vector Field')
 
         return dX_dt, dY_dt, X, Y
+    
+    def cal_flow_field3D(self, select_dim=(0, 1, 2), vars_lim=(-1., 1., -1., 1., -1., 1.), N=100):
+        """
+            三维流速场
+            select_dim: 选择的维度 (x, y, z)
+            vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max, z_min, z_max)
+            N    : 网格点数
+        """
+        params_list = list(self.params_nodes.values())
+        dX_dt, dY_dt, dZ_dt, X, Y, Z = flow_field3D(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N)
+
+        return dX_dt, dY_dt, dZ_dt, X, Y, Z
 
 @njit
 def model(vars, t, I, params):
@@ -833,7 +846,7 @@ def find_extrema(time_series_matrix):
 
 
 # ========= 二维平面流速场 =========
-def flow_field(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100):
+def flow_field2D(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100):
     """
         二维平面流速场
         fun  : 速度函数
@@ -860,3 +873,34 @@ def flow_field(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1
     dY_dt = dvars_dt[dim2]
 
     return dX_dt, dY_dt, X, Y
+
+def flow_field3D(fun, params, N_vars, select_dim=(0, 1, 2), vars_lim=(-1., 1., -1., 1., -1., 1.), N=100):
+    """
+        三维流速场
+        fun  : 速度函数
+        params: 速度函数的参数
+        N_vars: 速度函数的变量数量
+        select_dim: 选择的维度 (x, y, z)
+        vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max, z_min, z_max)
+        N    : 网格点数
+    """
+    vars = np.zeros((N_vars, N, N, N))
+    # 生成网格
+    x_min, x_max, y_min, y_max, z_min, z_max = vars_lim
+    x = np.linspace(x_min, x_max, N)
+    y = np.linspace(y_min, y_max, N)
+    z = np.linspace(z_min, z_max, N)
+    X, Y, Z = np.meshgrid(x, y, z)
+
+    dim1, dim2, dim3 = select_dim
+    vars[dim1] = X
+    vars[dim2] = Y
+    vars[dim3] = Z
+    
+    I = np.zeros(N_vars)
+    dvars_dt = fun(vars, 0, I, params)
+    dX_dt = dvars_dt[dim1]
+    dY_dt = dvars_dt[dim2]
+    dZ_dt = dvars_dt[dim3]
+
+    return dX_dt, dY_dt, dZ_dt, X, Y, Z
