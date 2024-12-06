@@ -28,11 +28,14 @@ def HH_model(vars, t, I, params):
     # 状态变量
     V, m, h, n = vars
 
-   # 计算 α 和 β 函数
-    alpha_n = 0.01 * (V + 55) / (1 - np.exp(-(V + 55) / 10))
+    # 小保护值，防止除零
+    epsilon = 1e-12
+
+    # 计算 α 和 β 函数
+    alpha_n = 0.01 * (V + 55) / (1 - np.exp(-(V + 55) / 10) + epsilon)
     beta_n = 0.125 * np.exp(-(V + 65) / 80)
 
-    alpha_m = 0.1 * (V + 40) / (1 - np.exp(-(V + 40) / 10))
+    alpha_m = 0.1 * (V + 40) / (1 - np.exp(-(V + 40) / 10) + epsilon)
     beta_m = 4 * np.exp(-(V + 65) / 18)
 
     alpha_h = 0.07 * np.exp(-(V + 65) / 20)
