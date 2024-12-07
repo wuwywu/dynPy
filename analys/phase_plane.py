@@ -77,7 +77,7 @@ def flow_field3D(fun, params, N_vars, select_dim=(0, 1, 2), vars_lim=(-1., 1., -
 
 
 # ================================= 零斜线 nullclines =================================
-def find_nullclines(fun, params, N_vars, x_dim=0, y_dim=1, dv_dt_dim=0, x_range=(0., 1.), N=100, initial_target=None):
+def find_nullclines(fun, params, N_vars, x_dim=0, y_dim=1, dv_dt_dim=0, x_range=(0., 1.), N=100, initial_guesse=None, initial_vars=None):
     """
     通用零斜线求解函数
 
@@ -90,17 +90,22 @@ def find_nullclines(fun, params, N_vars, x_dim=0, y_dim=1, dv_dt_dim=0, x_range=
         dv_dt_dim   : 自定零斜线的维度
         x_range     : 零斜线自变量范围 (x_min, x_max)
         N           : 零斜线的点数量
-        initial_vars: 初始变量值列表 (长度为 N_vars)
+        initial_guesse: 指定初始值
+        initial_vars: 指定所有变量的值，形状为 (N_vars,)
 
     Returns:
         nullcline: 零斜线的值数组，形状为 (N,)
     """
-    initial_vars = np.zeros(N_vars) + 1e-12                # 默认初始值列表
+    
+    if initial_vars is not None:
+        initial_vars = np.asarray(initial_vars)
+    else:
+        initial_vars = np.zeros(N_vars) + 1e-12
     
     # 尝试多个初始猜测值
     initial_guesses = [0.1, 0.5, 1.0, 5., 10., 50., -0.1, -0.5, -1.0, -5., -10., 50.]
-    if initial_target is not None:
-        initial_guesses.insert(0, initial_target)
+    if initial_guesse is not None:
+        initial_guesses.insert(0, initial_guesse)
 
     x_min, x_max = x_range
     v_range = np.linspace(x_min, x_max, N)  # 自变量的取值范围

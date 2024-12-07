@@ -225,16 +225,22 @@ class Neurons:
 
         return dX_dt, dY_dt, dZ_dt, X, Y, Z
 
-    def cal_nullclines(self, x_dim=0, y_dim=1, x_range=(0., 1.), dvar_dt=(0, 1), N=100, initial_target=None, plt_flag=False):
+    def cal_nullclines(self, x_dim=0, y_dim=1, x_range=(0., 1.), dvar_dt=(0, 1), N=100, initial_guesse=None, initial_vars=None, plt_flag=False):
         """
             通用零斜线求解函数
-            var_dim: 变量维度，用于确定求解的变量。(x维度)
-            target_dim: 目标维度，用于确定求解的目标范围。(dvar_dt = 0的维度)
+            x_dim       : 指定自变量的维度 int  (自变量的维度)
+            y_dim       : 指定求解的目标维度 int  (应变量的维度)
+            x_range     : 零斜线自变量范围 (x_min, x_max)
+            dvar_dt     : 求解函数的目标维度 
+            N           : 零斜线的点数量
+            initial_guesse: 指定初始值
+            initial_vars: 指定所有变量的值，形状为 (N_vars,)
+            plt_flag    : 是否绘制零斜线
         """
         nullclines_list = np.full((2, N), np.nan)
         params_list = list(self.params_nodes.values())
         for i, dv_dt_dim in enumerate(dvar_dt):
-            nullclines = find_nullclines(self.model, params_list, self.N_vars, x_dim=x_dim, y_dim=y_dim, dv_dt_dim=dv_dt_dim, x_range=x_range, N=N, initial_target=initial_target)
+            nullclines = find_nullclines(self.model, params_list, self.N_vars, x_dim=x_dim, y_dim=y_dim, dv_dt_dim=dv_dt_dim, x_range=x_range, N=N, initial_guesse=initial_guesse, initial_vars=initial_vars)
 
             nullclines_list[i] = nullclines
 
@@ -487,6 +493,8 @@ class Nodes:
             raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
         self.method = method_map[method]
 
+        self.model = model  # 模型的微分方程
+
         self._params_f()
         self._vars_f()
 
@@ -522,6 +530,67 @@ class Nodes:
         for i, val in enumerate(vars_vals):
             self.vars_nodes[i] = val
 
+    def cal_flow_field2D(self, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100, plt_flag=False):
+        """
+            二维平面流速场
+            select_dim: 选择的维度 (x, y)
+            vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max)
+            N    : 网格点数
+        """
+        params_list = list(self.params_nodes.values())
+        dX_dt, dY_dt, X, Y = flow_field2D(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N)
+
+        if plt_flag:
+            plt.streamplot(X, Y, dX_dt, dY_dt, density=1.5, linewidth=1., arrowsize=1.2, arrowstyle='->', color='C1', zorder=0)
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.title('Vector Field')
+
+        return dX_dt, dY_dt, X, Y
+    
+    def cal_flow_field3D(self, select_dim=(0, 1, 2), vars_lim=(-1., 1., -1., 1., -1., 1.), N=100):
+        """
+            三维流速场
+            select_dim: 选择的维度 (x, y, z)
+            vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max, z_min, z_max)
+            N    : 网格点数
+        """
+        params_list = list(self.params_nodes.values())
+        dX_dt, dY_dt, dZ_dt, X, Y, Z = flow_field3D(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N)
+
+        return dX_dt, dY_dt, dZ_dt, X, Y, Z
+
+    def cal_nullclines(self, x_dim=0, y_dim=1, x_range=(0., 1.), dvar_dt=(0, 1), N=100, initial_guesse=None, initial_vars=None, plt_flag=False):
+        """
+            通用零斜线求解函数
+            x_dim       : 指定自变量的维度 int  (自变量的维度)
+            y_dim       : 指定求解的目标维度 int  (应变量的维度)
+            x_range     : 零斜线自变量范围 (x_min, x_max)
+            dvar_dt     : 求解函数的目标维度 
+            N           : 零斜线的点数量
+            initial_guesse: 指定初始值
+            initial_vars: 指定所有变量的值，形状为 (N_vars,)
+            plt_flag    : 是否绘制零斜线
+        """
+        nullclines_list = np.full((2, N), np.nan)
+        params_list = list(self.params_nodes.values())
+        for i, dv_dt_dim in enumerate(dvar_dt):
+            nullclines = find_nullclines(self.model, params_list, self.N_vars, x_dim=x_dim, y_dim=y_dim, dv_dt_dim=dv_dt_dim, x_range=x_range, N=N, initial_guesse=initial_guesse, initial_vars=initial_vars)
+
+            nullclines_list[i] = nullclines
+
+        if plt_flag:
+            v_range = np.linspace(x_range[0], x_range[1], N)
+            plt.plot(v_range, nullclines_list[0], label=f'var{dvar_dt[0]} nullcline(dvar{dvar_dt[0]}_dt=0)')
+            plt.plot(v_range, nullclines_list[1], label=f'var{dvar_dt[1]} nullcline (dvar{dvar_dt[1]}_dt=0)')
+            plt.xlabel(f'var{dvar_dt[0]}')
+            plt.ylabel(f'var{dvar_dt[1]}')
+            plt.title('Nullclines')
+            plt.legend()
+
+        return nullclines_list
+    
+    
 @njit
 def model(vars, t, I, params):
     res = np.zeros_like(vars)
@@ -933,7 +1002,7 @@ def flow_field3D(fun, params, N_vars, select_dim=(0, 1, 2), vars_lim=(-1., 1., -
 
 
 # ========= 零斜线 nullclines =========
-def find_nullclines(fun, params, N_vars, x_dim=0, y_dim=1, dv_dt_dim=0, x_range=(0., 1.), N=100, initial_target=None):
+def find_nullclines(fun, params, N_vars, x_dim=0, y_dim=1, dv_dt_dim=0, x_range=(0., 1.), N=100, initial_guesse=None, initial_vars=None):
     """
     通用零斜线求解函数
 
@@ -946,17 +1015,22 @@ def find_nullclines(fun, params, N_vars, x_dim=0, y_dim=1, dv_dt_dim=0, x_range=
         dv_dt_dim   : 自定零斜线的维度
         x_range     : 零斜线自变量范围 (x_min, x_max)
         N           : 零斜线的点数量
-        initial_vars: 初始变量值列表 (长度为 N_vars)
+        initial_guesse: 指定初始值
+        initial_vars: 指定所有变量的值，形状为 (N_vars,)
 
     Returns:
         nullcline: 零斜线的值数组，形状为 (N,)
     """
-    initial_vars = np.zeros(N_vars) + 1e-12                # 默认初始值列表
+    
+    if initial_vars is not None:
+        initial_vars = np.asarray(initial_vars)
+    else:
+        initial_vars = np.zeros(N_vars) + 1e-12
     
     # 尝试多个初始猜测值
     initial_guesses = [0.1, 0.5, 1.0, 5., 10., 50., -0.1, -0.5, -1.0, -5., -10., 50.]
-    if initial_target is not None:
-        initial_guesses.insert(0, initial_target)
+    if initial_guesse is not None:
+        initial_guesses.insert(0, initial_guesse)
 
     x_min, x_max = x_range
     v_range = np.linspace(x_min, x_max, N)  # 自变量的取值范围
