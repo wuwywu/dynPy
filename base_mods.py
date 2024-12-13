@@ -630,9 +630,9 @@ class Synapse:
         # 选择突触类型
         self.synType = synType
         if self.synType == "electr":
-            self.syn = syn_electr  # 电突触
+            self.syn = syn_electr       # 电突触
         elif self.synType == "chem":
-            self.syn = syn_chem  # Alpha_化学突触
+            self.syn = syn_chem         # 化学突触
 
         self.pre = pre                  # 网络前节点
         self.post = post                # 网络后节点
@@ -660,7 +660,8 @@ class Synapse:
         # 触前和突触后的状态
         pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
         post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
-
+        # params_list = list(self.params_syn.values())
+        
         I_post = self.syn(pre_state, post_state, self.w, self.conn)  # 突触后神经元接收的突触电流
 
         self.t += self.dt  # 时间前进
