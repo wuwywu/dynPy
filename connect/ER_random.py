@@ -23,11 +23,14 @@ import random
 
 # 随机网络，G(n, p)模型  概率p连接一条边, 单向
 @njit
-def create_ER_p(n, p):
+def create_ER_p(n, p, seed=None):
     """
     n-网络的总节点数
     p-网络中节点间连接的概率
+    seed-随机数种子
     """
+    if seed is not None:
+        np.random.seed(seed)
     random_matrix = np.random.rand(n, n)
     connection_matrix = (random_matrix < p).astype(np.int32)
     np.fill_diagonal(connection_matrix, 0)  #不考虑自连接
@@ -36,11 +39,14 @@ def create_ER_p(n, p):
 
 # 随机网络，G(n, M)模型  网络固定有M条边，单向
 @njit
-def create_ER_M(n, M):
+def create_ER_M(n, M, seed=None):
     """
     n-网络的总节点数
     M-网络的总边数
+    seed-随机数种子
     """
+    if seed is not None:
+        np.random.seed(seed)
     # 确保M不大于n*(n-1)/2，即无向图的最大边数（不含自环）
     max_edges = n * (n - 1) // 2   
     if M > max_edges:

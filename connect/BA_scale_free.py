@@ -23,13 +23,16 @@ from scipy.optimize import curve_fit
 
 # ============= 定义无标度网络的创建函数(并行版) =============
 @njit
-def create_sf_jit(n=100, n_init=5, n_add=2):
+def create_sf_jit(n=100, n_init=5, n_add=2, seed=None):
     """
     创建一个BA无标度网络。
     n: int, 网络的总节点数。
     n_init: int, 网络的初始节点数。
     n_add: int, 每个新节点与已有节点连接的数目。
+    seed: int, 随机数种子。
     """
+    if seed is not None:
+        np.random.seed(seed)
     matrix = np.zeros((n, n))  # 初始化邻接矩阵
     
     # 开始创建一个全连接的初始网络

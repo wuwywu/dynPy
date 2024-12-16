@@ -23,7 +23,7 @@ import random
 # ======================= 定义无标度网络的创建函数(并行版) =======================
 # 创建一个小世界网络的连接矩阵(双向)
 @njit
-def create_sw_jit(n, k, p):
+def create_sw_jit(n, k, p, seed=None):
     """
     使用 numba 加速创建小世界网络的连接矩阵(双向)
     
@@ -31,10 +31,13 @@ def create_sw_jit(n, k, p):
         n (int): 网络中的节点数
         k (int): 每个节点的初始平均度数（必须为偶数）
         p (float): 重连概率（0到1之间）
+        seed (int): 随机数种子
         
     返回:
         np.ndarray: 小世界网络的连接矩阵
     """
+    if seed is not None:
+        np.random.seed(seed)
     # 创建一个环形网络
     matrix = np.zeros((n, n), dtype=np.int32)
     for i in range(n):
@@ -67,7 +70,7 @@ def create_sw_jit(n, k, p):
 
 # 创建一个单向连接的小世界网络
 @njit
-def create_Disw_jit(n, k, p):
+def create_Disw_jit(n, k, p, seed=None):
     """
     使用 numba 加速创建一个单向连接的小世界网络
 
@@ -75,10 +78,14 @@ def create_Disw_jit(n, k, p):
         n (int): 网络中节点的数量
         k (int): 每个节点的出度
         p (float): 重连概率
+        seed (int): 随机数种子
 
     返回:
         numpy.ndarray: 表示连接关系的矩阵
     """
+    if seed is not None:
+        np.random.seed(seed)
+        
     # 创建一个 n x n 的零矩阵
     matrix = np.zeros((n, n), dtype=np.int32)
 
