@@ -4,17 +4,30 @@
 # User      : WuY
 # File      : base_mods.py
 # 文件中包含：
-# 1、节点动力学基础模块(神经元，一般节点)
-# 2、突触动力学基础模块
-# 3、数值模拟算法(欧拉，龙格库塔，离散)
-# 4、常用的工具函数(延迟存储器, 连接矩阵to拉普拉斯矩阵, 噪声产生器)
+"""
+本模块包含：
+    1、节点动力学基础模块(神经元，一般节点)
+    2、突触动力学基础模块
+    3、数值模拟算法(欧拉，龙格库塔，离散)
+    4、常用的工具函数
+        1). 延迟存储器, delayer
+        2). 连接矩阵to拉普拉斯矩阵, to_laplacian
+        3). 噪声产生器, noiser
+        4). 极大极小值, find_extrema
+        5). 二\三维平面流速场, flow_field2D/flow_field3D
+        6). 零斜线 nullclines, find_nullclines
+"""
 
 """
     神经元基础模块包含的功能：
         1、计算ISI (cal_isi)
         2、计算CV (cal_cv)
         3、计算Kuramoto Order Parameter (cal_kop)
+        4、计算峰值时间 (return_spike_times)
         注：这些功能使用前需要打开峰值时间记录器(record_spike_times = True)
+
+        5、cal_flow_field2D/flow_field3D (计算2/3维的速度场)
+        6、cal_nullclines (计算零斜线)   
 """
 
 import os
@@ -195,15 +208,17 @@ class Neurons:
         
         return calculate_kuramoto(self.spike_times, self.dt, min_spikes=min_spikes)
     
-    def cal_flow_field2D(self, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100, plt_flag=False):
+    def cal_flow_field2D(self, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100, initial_vars=None, plt_flag=False):
         """
             二维平面流速场
             select_dim: 选择的维度 (x, y)
             vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max)
+            initial_vars: 指定所有变量的值，形状为 (N_vars,)
             N    : 网格点数
+            plt_flag : 是否绘制图像
         """
         params_list = list(self.params_nodes.values())
-        dX_dt, dY_dt, X, Y = flow_field2D(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N)
+        dX_dt, dY_dt, X, Y = flow_field2D(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N, initial_vars=initial_vars)
 
         if plt_flag:
             plt.streamplot(X, Y, dX_dt, dY_dt, density=1.5, linewidth=1., arrowsize=1.2, arrowstyle='->', color='C1', zorder=0)
@@ -213,15 +228,16 @@ class Neurons:
 
         return dX_dt, dY_dt, X, Y
     
-    def cal_flow_field3D(self, select_dim=(0, 1, 2), vars_lim=(-1., 1., -1., 1., -1., 1.), N=100):
+    def cal_flow_field3D(self, select_dim=(0, 1, 2), vars_lim=(-1., 1., -1., 1., -1., 1.), N=100, initial_vars=None):
         """
             三维流速场
             select_dim: 选择的维度 (x, y, z)
             vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max, z_min, z_max)
             N    : 网格点数
+            initial_vars: 指定所有变量的值，形状为 (N_vars,)
         """
         params_list = list(self.params_nodes.values())
-        dX_dt, dY_dt, dZ_dt, X, Y, Z = flow_field3D(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N)
+        dX_dt, dY_dt, dZ_dt, X, Y, Z = flow_field3D(self.model, params_list, self.N_vars, select_dim=select_dim, vars_lim=vars_lim, N=N, initial_vars=initial_vars)
 
         return dX_dt, dY_dt, dZ_dt, X, Y, Z
 
@@ -661,7 +677,7 @@ class Synapse:
         pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
         post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
         # params_list = list(self.params_syn.values())
-        
+
         I_post = self.syn(pre_state, post_state, self.w, self.conn)  # 突触后神经元接收的突触电流
 
         self.t += self.dt  # 时间前进
@@ -942,7 +958,7 @@ def find_extrema(time_series_matrix):
 
 
 # ========= 二维平面流速场 =========
-def flow_field2D(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100):
+def flow_field2D(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100, initial_vars=None):
     """
         二维平面流速场
         fun  : 速度函数
@@ -951,8 +967,13 @@ def flow_field2D(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1.,
         select_dim: 选择的维度 (x, y)
         vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max)
         N    : 网格点数
+        initial_vars: 指定所有变量的值，形状为 (N_vars,)
     """
-    vars = np.zeros((N_vars, N, N))
+    if initial_vars is not None:
+        initial_vars = np.asarray(initial_vars)
+    else:
+        initial_vars = np.zeros(N_vars) + 1e-12
+    vars = np.broadcast_to(initial_vars[:, np.newaxis, np.newaxis], (N_vars, N, N)).copy()
     # 生成网格
     x_min, x_max, y_min, y_max = vars_lim
     x = np.linspace(x_min, x_max, N)
@@ -970,7 +991,7 @@ def flow_field2D(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1.,
 
     return dX_dt, dY_dt, X, Y
 
-def flow_field3D(fun, params, N_vars, select_dim=(0, 1, 2), vars_lim=(-1., 1., -1., 1., -1., 1.), N=100):
+def flow_field3D(fun, params, N_vars, select_dim=(0, 1, 2), vars_lim=(-1., 1., -1., 1., -1., 1.), N=100, initial_vars=None):
     """
         三维流速场
         fun  : 速度函数
@@ -979,8 +1000,13 @@ def flow_field3D(fun, params, N_vars, select_dim=(0, 1, 2), vars_lim=(-1., 1., -
         select_dim: 选择的维度 (x, y, z)
         vars_lim: 速度函数的变量范围 (x_min, x_max, y_min, y_max, z_min, z_max)
         N    : 网格点数
+        initial_vars: 指定所有变量的值，形状为 (N_vars,)
     """
-    vars = np.zeros((N_vars, N, N, N))
+    if initial_vars is not None:
+        initial_vars = np.asarray(initial_vars)
+    else:
+        initial_vars = np.zeros(N_vars) + 1e-12
+    vars = np.broadcast_to(initial_vars[:, np.newaxis, np.newaxis, np.newaxis], (N_vars, N, N, N)).copy()
     # 生成网格
     x_min, x_max, y_min, y_max, z_min, z_max = vars_lim
     x = np.linspace(x_min, x_max, N)
