@@ -41,6 +41,8 @@ from numba import njit, prange
 from scipy.optimize import root
 import random
 
+
+# os.environ['NUMBA_NUM_THREADS'] = '4' # 限制使用的线程数量
 # np.random.seed(2024)
 # random.seed(2024)
 
