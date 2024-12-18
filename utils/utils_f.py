@@ -88,6 +88,21 @@ def to_laplacian(adjacency_matrix):
     return laplacian_matrix
 
 
+# ================================= 计算特征值(Numba版) =================================
+@njit
+def eigvals_qr(A, num_iterations=1000):
+    n = A.shape[0]
+    A_k = np.ascontiguousarray(A.copy())  # 复制原始矩阵
+    
+    for _ in range(num_iterations):
+        # QR分解
+        Q, R = np.linalg.qr(A_k)
+        A_k = np.dot(R, Q)  # 迭代更新矩阵
+    
+    # 对角元素即为特征值
+    return np.diag(A_k)
+
+
 #  ================================= 噪声 =================================
 class noiser:
     """
