@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
 from numba import njit, prange
 import os
-os.environ['NUMBA_NUM_THREADS'] = '4'
+# os.environ['NUMBA_NUM_THREADS'] = '4'
 
 # ==================================== 用于 numba 并行运算的函数代码 ====================================
 # ẋ = f(x, t) 或 x_(n 1) = f(x_n) 的函数 f。
@@ -153,7 +153,7 @@ def msf_mLCE_jit_complex(x0, f, jac, n_forward, n_compute, dt, gamma, *args):
     return mLCE
 
 @njit
-def msf_LCE_jit(x0, f, jac, n_forward, n_compute, dt, gamma, p=None, *args):
+def msf_LCE_jit(x0, f, jac, n_forward, n_compute, dt, gamma, *args):
     """
     Parameters:
         x0 (numpy.ndarray)：初始条件。
@@ -169,15 +169,14 @@ def msf_LCE_jit(x0, f, jac, n_forward, n_compute, dt, gamma, p=None, *args):
     # x = x0
     x = np.ascontiguousarray(x0)
     dim = len(x0)
-    if p is None: p = dim
     # 初始化
     for _ in range(n_forward):
         x = rk4_step(x, t, dt, f, *args)
         t += dt
 
     # Compute the mLCE
-    W = np.eye(dim)[:, :p]
-    LCE = np.zeros(int(p))
+    W = np.eye(dim)
+    LCE = np.zeros(int(dim))
 
     for _ in range(n_compute):
         # w = system.next_LTM(w)
@@ -195,8 +194,7 @@ def msf_LCE_jit(x0, f, jac, n_forward, n_compute, dt, gamma, p=None, *args):
         t += dt
 
         W, R = np.linalg.qr(W)
-        for j in range(p):
-            LCE[j] += np.log(np.abs(R[j, j]))
+        LCE += np.log(np.abs(np.diag(R)))
 
     LCE = LCE / (n_compute * dt)
 

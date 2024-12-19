@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
 from numba import njit, prange
 import os
-os.environ['NUMBA_NUM_THREADS'] = '4'
+# os.environ['NUMBA_NUM_THREADS'] = '4'
 
 
 # ==================================== 用于 numba 并行运算的函数代码 ====================================
@@ -86,7 +86,7 @@ def mLCE_jit(x0, f, jac, n_forward, n_compute, dt, *args):
 
 
 @njit
-def LCE_jit(x0, f, jac, n_forward, n_compute, dt, p=None, *args):
+def LCE_jit(x0, f, jac, n_forward, n_compute, dt, *args):
     """
     Parameters:
         x0 (numpy.ndarray)：初始条件。
@@ -95,22 +95,20 @@ def LCE_jit(x0, f, jac, n_forward, n_compute, dt, p=None, *args):
         n_forward (int): Number of steps before starting the mLCE computation.
         n_compute (int): Number of steps to compute the mLCE, can be adjusted using keep_evolution.
         dt（float）: 两个时间步之间的时间间隔。
-        p (int): Number of LCE to compute.
         *args :  f 和 jac 需要修改的量
     """
     t = 0
     # x = x0
     x = np.ascontiguousarray(x0)
     dim = len(x0)
-    if p is None: p = dim
     # 初始化
     for _ in range(n_forward):
         x = rk4_step(x, t, dt, f, *args)
         t += dt
 
     # Compute the mLCE
-    W = np.eye(dim)[:, :p]
-    LCE = np.zeros(int(p))
+    W = np.eye(dim)
+    LCE = np.zeros(int(dim))
 
     for _ in range(n_compute):
         # w = system.next_LTM(w)
@@ -128,8 +126,7 @@ def LCE_jit(x0, f, jac, n_forward, n_compute, dt, p=None, *args):
         t += dt
 
         W, R = np.linalg.qr(W)
-        for j in range(p):
-            LCE[j] += np.log(np.abs(R[j, j]))
+        LCE += np.log(np.abs(np.diag(R)))
 
     LCE = LCE / (n_compute * dt)
 
@@ -272,17 +269,16 @@ if __name__ == "__main__":
         # print(mLCE_values)
         return mLCE_values
 
-    # @njit(parallel=True)
-    # def parallel_LCE(sigma_list, x0, f, jac, T_init, T_cal, dt, *args):
-    #     p = None
-    #     n = len(sigma_list)
-    #     LCE_values = np.zeros((n, 3))
-    #     for i in prange(n):
-    #         sigma = sigma_list[i]
-    #         LCE_values[i] = LCE_jit(x0, f, jac, T_init, T_cal, dt, p, sigma, *args)
-    #
-    #     # print(mLCE_values)
-    #     return LCE_values
+    @njit(parallel=True)
+    def parallel_LCE(sigma_list, x0, f, jac, T_init, T_cal, dt, *args):
+        n = len(sigma_list)
+        LCE_values = np.zeros((n, 3))
+        for i in prange(n):
+            sigma = sigma_list[i]
+            LCE_values[i] = LCE_jit(x0, f, jac, T_init, T_cal, dt, sigma, *args)
+    
+        # print(mLCE_values)
+        return LCE_values
 
 
     # 测试并行运算
@@ -291,8 +287,8 @@ if __name__ == "__main__":
     # LCE = LCE_jit(x0, f, jac, T_init, T_cal, dt, None, sigma, rho, beta)
     # print(LCE)
 
-    mLCE_values = parallel_mLCE(sigma_list, x0, f, jac, T_init, T_cal, dt, rho, beta)
-    # LCE_values = parallel_LCE(sigma_list, x0, f, jac, T_init, T_cal, dt, rho, beta)
+    # mLCE_values = parallel_mLCE(sigma_list, x0, f, jac, T_init, T_cal, dt, rho, beta)
+    mLCE_values = parallel_LCE(sigma_list, x0, f, jac, T_init, T_cal, dt, rho, beta)
 
     # Plot of LCE
     plt.figure(figsize=(6, 4))
