@@ -131,7 +131,10 @@ class Neurons:
 
     def set_vars_vals(self, vars_vals=[0, 0, ...]):
         """
-            用于自定义所有状态变量的值
+            用于自定义所有状态变量的值，可以用于更改网络大小(节点数)
+            vars_vals:
+                1、长度为 N_vars 的列表
+                2、维度为 (N_vars, N) 的数组      
         """
         self._vars()
         self._vars_f()
@@ -505,7 +508,7 @@ class Nodes:
         self.N = N  # 神经元数量
         self.dt = dt
         # 选择数值计算方法
-        self.method = method
+        self._method = method
         method_map = {"euler": Euler, "rk4": RK4, "discrete": discrete}
         if method not in method_map:
             raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
@@ -639,7 +642,7 @@ class Synapse:
     """
     def __init__(self, pre, post, conn=None, synType="electr", method="euler"):
         # 选择数值计算方法
-        self.method = method
+        self._method = method
         method_map = {"euler": Euler, "rk4": RK4, "discrete": discrete}
         if method not in method_map:
             raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
