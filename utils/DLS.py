@@ -28,6 +28,7 @@ class DLS:
     """
     def __init__(self, N=1, local=[1, 2], alpha=0.1):
         self.N = N          # 需要学习的参量数
+        local = np.asarray(local)  # 将local转换为np.array
         self.local = local  # 需要调整的状态变量的位置
         self.alpha = alpha  # 使用 DLS 的学习率参数
         # 存储每个local元素对应的单位矩阵对角线乘以alpha
@@ -69,6 +70,7 @@ class DLS_ADMM:
     """
     def __init__(self, N=1, local=[1, 2], alpha=0.1, rho=0.1, use_admm=True, w_min=None, w_max=None):
         self.N = N          # 需要学习的参量数
+        local = np.asarray(local)  # 将local转换为np.array
         self.local = local  # 需要调整的状态变量的位置
         self.alpha = alpha  # 使用 DLS 的学习率参数
         self.rho = rho      # ADMM的惩罚参数
@@ -122,6 +124,7 @@ class DLS_ADMM_multiranges:
     """
     def __init__(self, N=1, local=[1, 2], alpha=0.1, rho=0.1, use_admm=True, ranges=None):
         self.N = N          # 需要学习的参量数
+        local = np.asarray(local)  # 将local转换为np.array
         self.local = local  # 需要调整的状态变量的位置
         self.alpha = alpha  # 使用 DLS 的学习率参数
         self.rho = rho      # ADMM的惩罚参数

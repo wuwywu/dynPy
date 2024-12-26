@@ -114,6 +114,7 @@ class Neurons:
             axis: 需要加上外部激励的维度
                 list
         """
+        axis = np.asarray(axis)
         I = np.zeros((self.N_vars, self.N))
         I[axis, :] += Io
 
