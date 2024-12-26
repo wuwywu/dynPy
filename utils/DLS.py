@@ -106,6 +106,9 @@ class DLS_ADMM:
 
     def reset(self):
         self.P = np.full((len(self.local), self.N), self.alpha)
+        # 初始化ADMM的z和mu
+        self.z = np.zeros((len(self.local), self.N))
+        self.mu = np.zeros((len(self.local), self.N))
 
 
 class DLS_ADMM_multiranges:
@@ -161,6 +164,9 @@ class DLS_ADMM_multiranges:
 
     def reset(self):
         self.P = np.full((len(self.local), self.N), self.alpha)
+        # 初始化ADMM的z和mu
+        self.z = np.zeros((len(self.local), self.N))
+        self.mu = np.zeros((len(self.local), self.N))
 
 
 # ==================  并行版 调用训练方法 ==================
