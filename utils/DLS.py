@@ -46,18 +46,7 @@ class DLS:
             self_y : 自定义输入的值，与这个值同步, float
             dt  :   积分步长
         """
-        # 外部因素的输入值  (N_节点, N_节点/N_自定义)
-        factor_dt = factor * dt  # (N_节点, N_节点/N_自定义)
-
-        if self_y is not None:
-            yMean = self_y  # 监督学习
-        else:
-            yMean = input[self.local].mean()
-
-        # 最小二乘法差值(N_节点,)
-        error_input = input - yMean
-
-        DLS_jit(w, factor_dt, error_input, self.local, self.P)
+        train_DLS(w, factor, input, self.local, self.P, dt=dt, self_y=self_y)
 
     def reset(self):
         self.P = np.full((len(self.local), self.N), self.alpha)
@@ -107,18 +96,7 @@ class DLS_ADMM:
             self_y : 自定义输入的值，与这个值同步, float
             dt  :   积分步长
         """
-        # 外部因素的输入值  (N_节点, N_节点/N_自定义)
-        factor_dt = factor * dt  # (N_节点, N_节点/N_自定义)
-
-        if self_y is not None:
-            yMean = self_y  # 监督学习
-        else:
-            yMean = input[self.local].mean()
-
-        # 最小二乘法差值(N_节点,)
-        error_input = input - yMean
-
-        DLS_jit(w, factor_dt, error_input, self.local, self.P)
+        train_DLS(w, factor, input, self.local, self.P, dt=dt, self_y=self_y)
 
         # 进行ADMM更新（如果使用ADMM）
         if self.use_admm:
@@ -172,18 +150,7 @@ class DLS_ADMM_multiranges:
             self_y : 自定义输入的值，与这个值同步, float
             dt  :   积分步长
         """
-        # 外部因素的输入值  (N_节点, N_节点/N_自定义)
-        factor_dt = factor * dt  # (N_节点, N_节点/N_自定义)
-
-        if self_y is not None:
-            yMean = self_y  # 监督学习
-        else:
-            yMean = input[self.local].mean()
-
-        # 最小二乘法差值(N_节点,)
-        error_input = input - yMean
-
-        DLS_jit(w, factor_dt, error_input, self.local, self.P)
+        train_DLS(w, factor, input, self.local, self.P, dt=dt, self_y=self_y)
 
         # 进行ADMM更新（如果使用ADMM）
         if self.use_admm:
@@ -191,6 +158,37 @@ class DLS_ADMM_multiranges:
 
     def reset(self):
         self.P = np.full((len(self.local), self.N), self.alpha)
+
+
+# ==================  并行版 调用训练方法 ==================
+@njit
+def train_DLS(w, factor, input, local, P, dt=0.01, self_y=None):
+    """
+    dx/dt = w*factor + f(x)
+    input = x_(t+1)
+
+    用来训练你想要修正的值,使得状态变量同步
+    args:
+        w : 需要更新的参数：如权重或设定的需要修正的值 (N_节点, N_节点/N_自定义)
+        factor : 与 w 相乘的量    (N_节点, N_节点/N_自定义)
+        input : 时刻 t+1 的状态变量, 在给出其他量后   (N_节点,)
+        local : 需要调整的状态变量的位置
+        P : 存储每个local元素对应的单位矩阵对角线乘以alpha
+        self_y : 自定义输入的值，与这个值同步, float
+        dt  :   积分步长
+    """
+    # 外部因素的输入值  (N_节点, N_节点/N_自定义)
+    factor_dt = factor * dt  # (N_节点, N_节点/N_自定义)
+
+    if self_y is not None:
+        yMean = self_y  # 监督学习
+    else:
+        yMean = input[local].mean()
+
+    # 最小二乘法差值(N_节点,)
+    error_input = input - yMean
+
+    DLS_jit(w, factor_dt, error_input, local, P)
 
 
 # ==================  并行版 动态学习同步算法 ==================
