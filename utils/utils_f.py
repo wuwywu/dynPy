@@ -103,7 +103,7 @@ def eigvals_qr(A, num_iterations=1000):
     return np.diag(A_k)
 
 
-#  ================================= 噪声 =================================
+# ================================= 噪声 =================================
 class noiser:
     """
         噪声产生
@@ -169,6 +169,83 @@ def Gaussian_colour_noise(D_noise, noise, dt, size, lam_color):
     noise = dt * noise
 
     return noise
+
+
+# ================================= 稀疏函数工具模块 =================================
+@njit
+def matrix_to_sparse(conn, weight_matrix=None):
+    """
+    将矩阵转换为稀疏矩阵
+  
+        参数：
+        - conn: 连接矩阵(二元矩阵)
+        - weight_matrix: 权重矩阵(可选)
+    
+        返回：
+        - pre_ids   : 前节点的id
+        - post_ids  : 后节点的id
+        - weights   : 节点对的权重
+    """
+    # 将 conn 转换为二元矩阵
+    binary_conn = np.where(conn != 0, 1, 0)
+  
+    # 如果未提供权重矩阵，则默认为全1矩阵
+    if weight_matrix is None:
+        weight_matrix = np.ones_like(conn, dtype=np.float64)
+    else:
+        weight_matrix = np.asarray(weight_matrix, dtype=np.float64)
+
+    # 确保 binary_conn 和 weight_matrix 形状一致
+    if binary_conn.shape != weight_matrix.shape:
+        raise ValueError("binary_conn 和 weight_matrix 的形状必须一致！")
+  
+    # 提取非零元素的行列索引
+    post_ids, pre_ids = np.nonzero(binary_conn)
+
+    # 提取对应权重
+    rows, cols = weight_matrix.shape
+    indices =  post_ids * rows + pre_ids  # 计算一维索引
+    weights = weight_matrix.ravel()[indices]  # 一维索引提取权重
+
+    # 将结果整合为一个三列矩阵
+    # ids_and_weights = np.vstack((pre_ids, post_ids, weights))
+
+    return pre_ids, post_ids, weights
+
+@njit
+def sparse_to_matrix(N_pre, N_post, pre_ids, post_ids, weights):
+    """
+    将稀疏矩阵信息转换为连接矩阵和权重矩阵
+    
+        参数：
+        - N: int, 神经元总数
+        - pre_ids: np.ndarray, 前节点id
+        - post_ids: np.ndarray, 后节点id
+        - weights: np.ndarray, 权重
+    
+        返回：
+        - conn: np.ndarray, 二元连接矩阵 
+        - weight_matrix: np.ndarray, 权重矩阵 
+    """
+    # 将输入转换为整数类型
+    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
+    # 初始化连接矩阵和权重矩阵
+    conn = np.zeros((N_post, N_pre), dtype=np.int32)
+    weight_matrix = np.zeros((N_post, N_pre), dtype=np.float64)
+  
+    # 扁平化索引
+    flat_indices = post_ids * N_post + pre_ids
+
+    # 将对应位置设置为连接
+    conn_flat = conn.ravel()
+    conn_flat[flat_indices] = 1
+
+    # 将权重赋值
+    weight_flat = weight_matrix.ravel()
+    weight_flat[flat_indices] = weights
+
+    return conn, weight_matrix
+
 
 
 if __name__ == "__main__":

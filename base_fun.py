@@ -24,6 +24,7 @@ import random
 """
 
 """
+神经元模型中的函数工具
     1). 峰值测算函数        :  spikes_eval  
     2). 记录峰值时间函数    :   record_spike_times
     3). 计算ISI函数         :  calculate_isi
@@ -31,6 +32,12 @@ import random
     5). 计算KOP函数(同步)   :  calculate_kuramoto
     5). 二\三维平面流速场   :  flow_field2D/flow_field3D
     6). 零斜线(nullclines) :  find_nullclines
+"""
+
+"""
+突触模型中的函数工具
+    1). 矩阵转稀疏矩阵      : matrix_to_sparse
+    2). 稀疏矩阵转矩阵      : sparse_to_matrix 
 """
 
 """
@@ -428,6 +435,82 @@ def find_nullclines(fun, params, N_vars, x_dim=0, y_dim=1, dv_dt_dim=0, x_range=
             nullcline.append(np.nan)  # 如果求解失败，返回 NaN
 
     return np.array(nullcline)
+
+
+# ================================= 突触模型中的函数工具 =================================
+@njit
+def matrix_to_sparse(conn, weight_matrix=None):
+    """
+    将矩阵转换为稀疏矩阵
+  
+        参数：
+        - conn: 连接矩阵(二元矩阵)
+        - weight_matrix: 权重矩阵(可选)
+    
+        返回：
+        - pre_ids   : 前节点的id
+        - post_ids  : 后节点的id
+        - weights   : 节点对的权重
+    """
+    # 将 conn 转换为二元矩阵
+    binary_conn = np.where(conn != 0, 1, 0)
+  
+    # 如果未提供权重矩阵，则默认为全1矩阵
+    if weight_matrix is None:
+        weight = np.ones_like(conn, dtype=np.float64)
+    else:
+        weight = np.asarray(weight_matrix, dtype=np.float64)
+
+    # 确保 binary_conn 和 weight_matrix 形状一致
+    if binary_conn.shape != weight.shape:
+        raise ValueError("binary_conn 和 weight_matrix 的形状必须一致！")
+  
+    # 提取非零元素的行列索引
+    post_ids, pre_ids = np.nonzero(binary_conn)
+
+    # 提取对应权重
+    rows, cols = weight.shape
+    indices =  post_ids * rows + pre_ids  # 计算一维索引
+    weights = weight.ravel()[indices]  # 一维索引提取权重
+
+    # 将结果整合为一个三列矩阵
+    # ids_and_weights = np.vstack((pre_ids, post_ids, weights))
+
+    return pre_ids, post_ids, weights
+
+@njit
+def sparse_to_matrix(N_pre, N_post, pre_ids, post_ids, weights):
+    """
+    将稀疏矩阵信息转换为连接矩阵和权重矩阵
+    
+        参数：
+        - N: int, 神经元总数
+        - pre_ids: np.ndarray, 前节点id
+        - post_ids: np.ndarray, 后节点id
+        - weights: np.ndarray, 权重
+    
+        返回：
+        - conn: np.ndarray, 二元连接矩阵 
+        - weight_matrix: np.ndarray, 权重矩阵 
+    """
+    # 将输入转换为整数类型
+    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
+    # 初始化连接矩阵和权重矩阵
+    conn = np.zeros((N_post, N_pre), dtype=np.int32)
+    weight_matrix = np.zeros((N_post, N_pre), dtype=np.float64)
+  
+    # 扁平化索引
+    flat_indices = post_ids * N_pre + pre_ids
+
+    # 将对应位置设置为连接
+    conn_flat = conn.ravel()
+    conn_flat[flat_indices] = 1
+
+    # 将权重赋值
+    weight_flat = weight_matrix.ravel()
+    weight_flat[flat_indices] = weights
+
+    return conn, weight_matrix
 
 
 # ================================= 常用工具 =================================

@@ -16,28 +16,40 @@ import matplotlib.pyplot as plt
 from numba import njit, prange
 import random
 from base_mods import Synapse
+from base_mods import delayer
 
 # np.random.seed(2024)
 # random.seed(2024)
 
 @njit
-def syn_chem_sigmoidal(pre_state, post_state, w, conn, params):
+def syn_chem_sigmoidal_sparse(pre_state, post_state, pre_ids, post_ids, weights, params):
     """
     sigmoidal 化学突触
         pre_state: 突触前的状态
         post_state: 突触后的状态
-        w: 突触权重
-        conn: 连接矩阵
+        pre_ids: 突触前神经元的索引
+        post_ids: 突触后神经元的索引
+        weights: 突触权重
         params: 突触参数
     """
     pre_mem, pre_firingTime, pre_flaglaunch = pre_state
     post_mem, post_firingTime, post_flaglaunch = post_state
+    
+    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
+
     e, theta, epsi = params
 
     # the sigmoidal function (a limiting version is the Heaviside function)
     s = 1 / (1 + np.exp(-epsi*(pre_mem - theta)))
     
-    Isyn = (w * conn * (e - post_mem)[:, None] * s[None, :]).sum(1) # 0维度--post，1维度--pre
+    # 计算突触电流贡献
+    currents = weights * s[pre_ids] * (e - post_mem[post_ids])
+
+    # 神经元数量
+    num_neurons = len(post_mem)  # 突触后神经元总数
+
+    # 累积电流贡献到突触后神经元
+    Isyn = np.bincount(post_ids, weights=currents, minlength=num_neurons)
 
     return Isyn
 
@@ -55,7 +67,7 @@ class syn_sigmoidal(Synapse):
         # 选择突触类型
         self.synType = synType
         if self.synType == "chem_sigmoidal":
-            self.syn = syn_chem_sigmoidal  # 化学突触
+            self.syn = syn_chem_sigmoidal_sparse  # 化学突触
 
         self._params()
         self._vars()
@@ -85,7 +97,7 @@ class syn_sigmoidal(Synapse):
         post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
         params_list = list(self.params_syn.values())
 
-        I_post = self.syn(pre_state, post_state, self.w, self.conn, params_list)  # 突触后神经元接收的突触电流, params_list
+        I_post = self.syn(pre_state, post_state, self.pre_ids, self.post_ids, self.w_sparse, params_list)  # 突触后神经元接收的突触电流, params_list
 
         self.t += self.dt  # 时间前进
 
@@ -101,14 +113,14 @@ class syn_sigmoidal_delay(Synapse):
         method  :    计算非线性微分方程的方法，("euler", "rk4", "discrete")
         delayer :    突触延迟器
     """
-    def __init__(self, pre, post, conn=None, synType="chem_sigmoidal", method="euler", delayer=None):
+    def __init__(self, pre, post, conn=None, synType="chem_sigmoidal", method="euler", delayN=0):
         super().__init__(pre=pre, post=post, conn=conn, synType=synType, method=method)
         # 选择突触类型
         self.synType = synType
         if self.synType == "chem_sigmoidal":
-            self.syn = syn_chem_sigmoidal  # 化学突触
+            self.syn = syn_chem_sigmoidal_sparse  # 化学突触
 
-        self.delayer = delayer
+        self.delayee = delayer(pre.N, int(delayN))
 
         self._params()
         self._vars()
@@ -134,15 +146,39 @@ class syn_sigmoidal_delay(Synapse):
         self.t = self.post.t  # 这个是非常重要的
 
         # 触前和突触后的状态
-        pre_mem = self.delayer(self.pre.vars_nodes[0])              # 存储延迟，并给出延迟的值
+        pre_mem = self.delayee(self.pre.vars_nodes[0])              # 存储延迟，并给出延迟的值
         pre_state = [pre_mem, self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
         post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
 
         # 将突触参数转化为列表
         params_list = list(self.params_syn.values())
 
-        I_post = self.syn(pre_state, post_state, self.w, self.conn, params_list)  # 突触后神经元接收的突触电流
+        I_post = self.syn(pre_state, post_state, self.pre_ids, self.post_ids, self.w_sparse, params_list)  # 突触后神经元接收的突触电流
 
         self.t += self.dt  # 时间前进
 
         return I_post
+
+
+# =============================== 矩阵计算神经网络(不建议使用) ===============================
+@njit
+def syn_chem_sigmoidal(pre_state, post_state, w, conn, params):
+    """
+    sigmoidal 化学突触
+        pre_state: 突触前的状态
+        post_state: 突触后的状态
+        w: 突触权重
+        conn: 连接矩阵
+        params: 突触参数
+    """
+    pre_mem, pre_firingTime, pre_flaglaunch = pre_state
+    post_mem, post_firingTime, post_flaglaunch = post_state
+    e, theta, epsi = params
+
+    # the sigmoidal function (a limiting version is the Heaviside function)
+    s = 1 / (1 + np.exp(-epsi*(pre_mem - theta)))
+    
+    Isyn = (w * conn * (e - post_mem)[:, None] * s[None, :]).sum(1) # 0维度--post，1维度--pre
+
+    return Isyn
+

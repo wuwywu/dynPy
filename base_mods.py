@@ -423,6 +423,7 @@ def model(vars, t, I, params):
     3、模拟的时间步长 dt    (与突触后的运行时间一致)
     4、连接矩阵 conn        (size  : [post_N, pre_N])
     5、突触前和突触后 pre, post
+    6、突触前和突触后的ids,以及对应的权重  : pre_ids, post_ids, w_sparse
 """
 class Synapse:
     """
@@ -443,9 +444,9 @@ class Synapse:
         # 选择突触类型
         self.synType = synType
         if self.synType == "electr":
-            self.syn = syn_electr       # 电突触
+            self.syn = syn_electr_sparse       # 电突触(稀疏)
         elif self.synType == "chem":
-            self.syn = syn_chem         # 化学突触
+            self.syn = syn_chem_sparse         # 化学突触(稀疏)
 
         self.pre = pre                  # 网络前节点
         self.post = post                # 网络后节点
@@ -453,6 +454,8 @@ class Synapse:
         self.dt = post.dt               # 计算步长
         self._params_f()
         self._vars_f()
+        self.to_sparse()
+        # self.to_dense()
 
     def _params_f(self):
         # 0维度--post，1维度--pre
@@ -462,6 +465,13 @@ class Synapse:
         self.t = self.post.t = 0.  # 运行时间
 
     def __call__(self):
+        # 触前和突触后的状态
+        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
+        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
+
+        return self.forward_sparse(pre_state, post_state)
+
+    def forward_sparse(self, pre_state, post_state):
         """
             开头和结尾更新时间(重要)
             self.t = self.post.t
@@ -469,18 +479,91 @@ class Synapse:
         """
         # 保证syn不管何时创建都能与突触后有相同的时间
         self.t = self.post.t  # 这个是非常重要的
-
-        # 触前和突触后的状态
-        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
         # params_list = list(self.params_syn.values())
 
-        I_post = self.syn(pre_state, post_state, self.w, self.conn)  # 突触后神经元接收的突触电流
+        I_post = self.syn(pre_state, post_state, self.pre_ids, self.post_ids, self.w_sparse, self.t)  # 突触后神经元接收的突触电流
 
         self.t += self.dt  # 时间前进
 
         return I_post
+          
+    def forward_dense(self, pre_state, post_state):
+        """
+            使用矩阵形式计算突触电流(不建议使用) 
+            开头和结尾更新时间(重要)
+            self.t = self.post.t
+            self.t += self.dt
+        """
+        # 保证syn不管何时创建都能与突触后有相同的时间
+        self.t = self.post.t  # 这个是非常重要的
+        # params_list = list(self.params_syn.values())
 
+        I_post = self.syn(pre_state, post_state, self.w, self.conn, self.t)  # 突触后神经元接收的突触电流
+
+        self.t += self.dt  # 时间前进
+
+        return I_post
+        
+    def to_sparse(self):
+        self.pre_ids, self.post_ids, self.w_sparse = matrix_to_sparse(self.conn, self.w)
+
+    def to_dense(self):
+        self.conn, self.w = sparse_to_matrix(self.pre.N, self.post.N, self.pre_ids, self.post_ids, self.w_sparse)
+
+
+@njit
+def syn_electr_sparse(pre_state, post_state, pre_ids, post_ids, weights, *args):
+    """
+        电突触
+        pre_state: 突触前的状态
+        post_state: 突触后的状态
+        pre_ids: 突触前神经元的索引
+        post_ids: 突触后神经元的索引
+        weights: 突触权重
+    """
+    pre_mem, pre_firingTime, pre_flaglaunch = pre_state
+    post_mem, post_firingTime, post_flaglaunch = post_state
+
+    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
+
+     # 计算膜电位差 (vj - vi)
+    vj_vi = pre_mem[pre_ids] - post_mem[post_ids]
+
+    # 计算突触电流贡献
+    currents = weights * vj_vi
+
+    # 神经元数量
+    num_neurons = len(post_mem)  # 突触后神经元总数
+
+    # 累积电流贡献到突触后神经元
+    Isyn = np.bincount(post_ids, weights=currents, minlength=num_neurons)
+
+    return Isyn
+
+@njit
+def syn_chem_sparse(pre_state, post_state, pre_ids, post_ids, weights, *args):
+    """
+        化学突触
+        pre_state: 突触前的状态
+        post_state: 突触后的状态
+        pre_ids: 突触前神经元的索引
+        post_ids: 突触后神经元的索引
+        weights: 突触权重
+    """
+    pre_mem, pre_firingTime, pre_flaglaunch = pre_state
+    post_mem, post_firingTime, post_flaglaunch = post_state
+
+    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
+
+    # 神经元数量
+    num_neurons = len(post_mem)  # 突触后神经元总数
+
+    # 累积电流贡献到突触后神经元
+    # Isyn = np.bincount(post_ids, weights=currents, minlength=num_neurons)
+
+    # return I_syn
+
+# =============================== 矩阵计算神经网络(不建议使用) ===============================
 @njit
 def syn_electr(pre_state, post_state, w, conn, *args):
     """
