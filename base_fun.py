@@ -298,6 +298,9 @@ def calculate_kuramoto(spike_times, dt, min_spikes=0):
 
     return mean_kop, kuramoto, phase, peak_id, (first_last_spk, last_first_spk)
 
+
+# ================================= 节点模型中的函数工具 =================================
+
 # ========= 二维平面流速场 =========
 def flow_field2D(fun, params, N_vars, select_dim=(0, 1), vars_lim=(-1., 1., -1., 1.), N=100, initial_vars=None):
     """
