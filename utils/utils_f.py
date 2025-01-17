@@ -247,6 +247,145 @@ def sparse_to_matrix(N_pre, N_post, pre_ids, post_ids, weights):
     return conn, weight_matrix
 
 
+# ========= 螺旋波动态显示器 =========
+class show_spiral_wave:
+    """
+    螺旋波动态显示器
+        var: 要显示的变量
+        Nx:  网络的一维长度
+        Ny:  网络的二维长度
+        save_gif: 是否保存gif动图
+    """
+    def __init__(self, var, Nx, Ny, save_gif=False):
+        self.var = var
+        self.Nx = Nx
+        self.Ny = Ny
+        self.save_gif = save_gif
+        self.frames = []
+        plt.ion()
+
+    def __call__(self, i, t=None, show_interval=1000):
+        """
+            i: 迭代次数
+            t: 时间
+            show_interval: 显示间隔
+        """
+        if i % show_interval <= 0.001:
+            var = self.var.reshape(self.Nx, self.Ny)
+            plt.clf()
+            plt.imshow(var, cmap="jet", origin="lower", aspect="auto")
+            if t is not None:
+                plt.title(f"t={t:.3f}")
+            else:
+                plt.title(f"i={i}")
+            plt.colorbar()
+            plt.pause(0.0000000000000000001)
+
+            if self.save_gif:
+                buffer_ = io.BytesIO()
+                plt.savefig(buffer_, format='png')
+                buffer_.seek(0)
+                self.frames.append(Image.open(buffer_))
+
+    def save_image(self, filename="animation.gif", duration=50):
+        """
+            保存gif动图
+            filename: 文件名
+            duration: 每帧持续时间(ms)
+        """
+        if self.save_gif:
+            self.frames[0].save(filename, save_all=True, append_images=self.frames[1:], duration=duration, loop=0)
+
+    def show_final(self):
+        """ 
+            显示最终图像
+        """
+        plt.ioff()
+        var = self.var.reshape(self.Nx, self.Ny)
+        plt.imshow(var, cmap="jet", origin="lower", aspect="auto")
+        plt.colorbar()
+        plt.show()  # 停止交互模式，显示最终图像
+
+
+# ========= 状态变量(膜电位)动态显示器 =========
+class show_state:
+    """
+    状态变量动态显示器
+        N_var:      要显示的变量数
+        N_time:     要显示时间宽度
+        dt:         计算步步长
+        save_gif:   是否保存gif动图
+    """ 
+    def __init__(self, N_var, N_show=50_00, dt=0.01, save_gif=False):
+        self.N_var = N_var
+        self.N_time = N_show
+        self.vars = np.full((N_show, N_var), np.nan)
+        self.dt = dt
+        self.count = 0
+        self.save_gif = save_gif
+        self.frames = []
+        plt.ion()
+
+    def __call__(self, var, i, t=None, show_interval=1000, pause=0.0000000000000000001):
+        """
+            var : 状态变量
+            i   : 迭代次数
+            t   : 时间
+            show_interval: 显示间隔(更新频率)
+            pause: 暂停时间
+        """
+        if len(var) != self.N_var:
+            raise ValueError("var的长度与N_var不一致")
+        
+        if self.count < self.N_time:
+            self.vars[self.count] = var
+        else:
+            self.vars[:-1] = self.vars[1:]
+            self.vars[-1] = var
+
+        self.count += 1
+        
+        if i % show_interval <= 0.001:
+            plt.clf()   # 清除当前图像
+            if t is not None:
+                if t < self.N_time*self.dt:
+                    self.time_vec = np.linspace(0, self.N_time*self.dt, self.N_time)
+                else:
+                    self.time_vec = np.linspace(t-self.N_time*self.dt, t, self.N_time)
+            else:        
+                if i < self.N_time:
+                    self.time_vec = np.linspace(0, self.N_time*self.dt, self.N_time)  
+                else:
+                    self.time_vec = np.linspace((i-self.N_time)*self.dt, i*self.dt, self.N_time)
+            self.vars_temp = self.vars.copy()
+            plt.plot(self.time_vec, self.vars_temp)
+            plt.xlim(self.time_vec[0], self.time_vec[-1])
+            plt.pause(pause)
+
+            if self.save_gif:
+                buffer_ = io.BytesIO()
+                plt.savefig(buffer_, format='png')
+                buffer_.seek(0)
+                self.frames.append(Image.open(buffer_))
+
+    def save_image(self, filename="animation.gif", duration=50):
+        """
+            保存gif动图
+            filename: 文件名
+            duration: 每帧持续时间(ms)
+        """
+        if self.save_gif:
+            self.frames[0].save(filename, save_all=True, append_images=self.frames[1:], duration=duration, loop=0)
+
+    def show_final(self):
+        """
+            显示最终图像
+        """
+        plt.ioff()
+        plt.plot(self.time_vec, self.vars_temp)
+        plt.xlim(self.time_vec[0], self.time_vec[-1])
+        plt.show()  # 停止交互模式，显示最终图像
+
 
 if __name__ == "__main__":
     N = 1

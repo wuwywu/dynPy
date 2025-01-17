@@ -15,12 +15,14 @@ from mpl_toolkits.mplot3d import Axes3D
 from numba import njit, prange
 from scipy.optimize import root
 import random
+from PIL import Image
+import io
 
 """
-    数值模拟算法(欧拉，龙格库塔，离散):
-        1). euler 方法 : Euler
-        2). rk4 方法   : RK4
-        3). 离散方法    : discrete
+数值模拟算法(欧拉，龙格库塔，离散):
+    1). euler 方法 : Euler
+    2). rk4 方法   : RK4
+    3). 离散方法    : discrete
 """
 
 """
@@ -46,6 +48,9 @@ import random
     2). 连接矩阵to拉普拉斯矩阵   :   to_laplacian
     3). 噪声产生器              :   noiser
     4). 极大极小值              :   find_extrema
+    5). numba版计算特征值       :   eigval_qr
+    6). 螺旋波动态显示器        :   spiral_wave_display
+    7). 状态变量(膜电位)动态显示器  :   state_variable_display
 """
 
 
@@ -698,6 +703,31 @@ def find_extrema(time_series_matrix):
     return maxima_values_array, maxima_indices_array, minima_values_array, minima_indices_array
 
 
+# ================================= 计算特征值(Numba版) =================================
+@njit
+def eigvals_qr(A, num_iterations=1000):
+    """
+    使用QR分解计算矩阵的特征值
+
+        参数:
+            A: 要计算特征值的矩阵
+            num_iterations: 迭代次数
+
+        返回:
+            特征值数组
+    """
+    n = A.shape[0]
+    A_k = np.ascontiguousarray(A.copy())  # 复制原始矩阵
+    
+    for _ in range(num_iterations):
+        # QR分解
+        Q, R = np.linalg.qr(A_k)
+        A_k = np.dot(R, Q)  # 迭代更新矩阵
+    
+    # 对角元素即为特征值
+    return np.diag(A_k)
+
+
 # ========= 螺旋波动态显示器 =========
 class show_spiral_wave:
     """
@@ -705,11 +735,14 @@ class show_spiral_wave:
         var: 要显示的变量
         Nx:  网络的一维长度
         Ny:  网络的二维长度
+        save_gif: 是否保存gif动图
     """
-    def __init__(self, var, Nx, Ny):
+    def __init__(self, var, Nx, Ny, save_gif=False):
         self.var = var
         self.Nx = Nx
         self.Ny = Ny
+        self.save_gif = save_gif
+        self.frames = []
         plt.ion()
 
     def __call__(self, i, t=None, show_interval=1000):
@@ -728,4 +761,109 @@ class show_spiral_wave:
                 plt.title(f"i={i}")
             plt.colorbar()
             plt.pause(0.0000000000000000001)
+
+            if self.save_gif:
+                buffer_ = io.BytesIO()
+                plt.savefig(buffer_, format='png')
+                buffer_.seek(0)
+                self.frames.append(Image.open(buffer_))
+
+    def save_image(self, filename="animation.gif", duration=50):
+        """
+            保存gif动图
+            filename: 文件名
+            duration: 每帧持续时间(ms)
+        """
+        if self.save_gif:
+            self.frames[0].save(filename, save_all=True, append_images=self.frames[1:], duration=duration, loop=0)
+
+    def show_final(self):
+        """ 
+            显示最终图像
+        """
+        plt.ioff()
+        var = self.var.reshape(self.Nx, self.Ny)
+        plt.imshow(var, cmap="jet", origin="lower", aspect="auto")
+        plt.colorbar()
+        plt.show()  # 停止交互模式，显示最终图像
+
+
+# ========= 状态变量(膜电位)动态显示器 =========
+class show_state:
+    """
+    状态变量动态显示器
+        N_var:      要显示的变量数
+        N_time:     要显示时间宽度
+        dt:         计算步步长
+        save_gif:   是否保存gif动图
+    """ 
+    def __init__(self, N_var, N_show=50_00, dt=0.01, save_gif=False):
+        self.N_var = N_var
+        self.N_time = N_show
+        self.vars = np.full((N_show, N_var), np.nan)
+        self.dt = dt
+        self.count = 0
+        self.save_gif = save_gif
+        self.frames = []
+        plt.ion()
+
+    def __call__(self, var, i, t=None, show_interval=1000, pause=0.0000000000000000001):
+        """
+            var : 状态变量
+            i   : 迭代次数
+            t   : 时间
+            show_interval: 显示间隔(更新频率)
+            pause: 暂停时间
+        """
+        if len(var) != self.N_var:
+            raise ValueError("var的长度与N_var不一致")
         
+        if self.count < self.N_time:
+            self.vars[self.count] = var
+        else:
+            self.vars[:-1] = self.vars[1:]
+            self.vars[-1] = var
+
+        self.count += 1
+        
+        if i % show_interval <= 0.001:
+            plt.clf()   # 清除当前图像
+            if t is not None:
+                if t < self.N_time*self.dt:
+                    self.time_vec = np.linspace(0, self.N_time*self.dt, self.N_time)
+                else:
+                    self.time_vec = np.linspace(t-self.N_time*self.dt, t, self.N_time)
+            else:        
+                if i < self.N_time:
+                    self.time_vec = np.linspace(0, self.N_time*self.dt, self.N_time)  
+                else:
+                    self.time_vec = np.linspace((i-self.N_time)*self.dt, i*self.dt, self.N_time)
+            self.vars_temp = self.vars.copy()
+            plt.plot(self.time_vec, self.vars_temp)
+            plt.xlim(self.time_vec[0], self.time_vec[-1])
+            plt.pause(pause)
+
+            if self.save_gif:
+                buffer_ = io.BytesIO()
+                plt.savefig(buffer_, format='png')
+                buffer_.seek(0)
+                self.frames.append(Image.open(buffer_))
+
+    def save_image(self, filename="animation.gif", duration=50):
+        """
+            保存gif动图
+            filename: 文件名
+            duration: 每帧持续时间(ms)
+        """
+        if self.save_gif:
+            self.frames[0].save(filename, save_all=True, append_images=self.frames[1:], duration=duration, loop=0)
+
+    def show_final(self):
+        """
+            显示最终图像
+        """
+        plt.ioff()
+        plt.plot(self.time_vec, self.vars_temp)
+        plt.xlim(self.time_vec[0], self.time_vec[-1])
+        plt.show()  # 停止交互模式，显示最终图像
+     

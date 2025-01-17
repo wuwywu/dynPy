@@ -46,7 +46,7 @@ nodes.params_nodes["s"] = 3.9
 nodes.spiking = False    # 关掉峰值探测器
 
 # 设定动态显示器
-spiral_wave = show_spiral_wave(nodes.vars_nodes[0], Nx, Ny)
+spiral_wave = show_spiral_wave(nodes.vars_nodes[0], Nx, Ny, save_gif=True)
 
 #设定突触和连接
 conn = create_diffusion_No_flow2D_4(Nx, Ny)
@@ -55,17 +55,10 @@ syn = Synapse(nodes, nodes, conn, method=method)
 syn.w.fill(2.)  # 设定耦合强度
 syn.to_sparse() # 换了耦合配置后重设稀疏化
 
-for i in range(1000_00):
+for i in range(500_00):
     spiral_wave(i, nodes.t, show_interval=1000)
     Isyn = syn()
     nodes(Isyn)
 
-mem = nodes.vars_nodes[0].reshape(Nx, Ny)
-
-plt.ioff()
-
-plt.figure(figsize=(10, 10))
-plt.imshow(mem, cmap="jet", origin="lower", aspect="auto")
-plt.colorbar()
-plt.show()
-
+spiral_wave.save_image()
+spiral_wave.show_final()
