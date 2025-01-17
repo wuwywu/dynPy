@@ -697,3 +697,35 @@ def find_extrema(time_series_matrix):
     
     return maxima_values_array, maxima_indices_array, minima_values_array, minima_indices_array
 
+
+# ========= 螺旋波动态显示器 =========
+class show_spiral_wave:
+    """
+    螺旋波动态显示器
+        var: 要显示的变量
+        Nx:  网络的一维长度
+        Ny:  网络的二维长度
+    """
+    def __init__(self, var, Nx, Ny):
+        self.var = var
+        self.Nx = Nx
+        self.Ny = Ny
+        plt.ion()
+
+    def __call__(self, i, t=None, show_interval=1000):
+        """
+            i: 迭代次数
+            t: 时间
+            show_interval: 显示间隔
+        """
+        if i % show_interval <= 0.001:
+            var = self.var.reshape(self.Nx, self.Ny)
+            plt.clf()
+            plt.imshow(var, cmap="jet", origin="lower", aspect="auto")
+            if t is not None:
+                plt.title(f"t={t:.3f}")
+            else:
+                plt.title(f"i={i}")
+            plt.colorbar()
+            plt.pause(0.0000000000000000001)
+        
