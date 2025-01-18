@@ -34,8 +34,6 @@ def syn_chem_sigmoidal_sparse(pre_state, post_state, pre_ids, post_ids, weights,
     """
     pre_mem, pre_firingTime, pre_flaglaunch = pre_state
     post_mem, post_firingTime, post_flaglaunch = post_state
-    
-    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
 
     e, theta, epsi = params
 
@@ -93,8 +91,8 @@ class syn_sigmoidal(Synapse):
         self.t = self.post.t  # 这个是非常重要的
 
         # 触前和突触后的状态
-        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
+        pre_state = (self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch)
+        post_state = (self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch)
         params_list = list(self.params_syn.values())
 
         I_post = self.syn(pre_state, post_state, self.pre_ids, self.post_ids, self.w_sparse, params_list)  # 突触后神经元接收的突触电流, params_list
@@ -147,8 +145,8 @@ class syn_sigmoidal_delay(Synapse):
 
         # 触前和突触后的状态
         pre_mem = self.delayee(self.pre.vars_nodes[0])              # 存储延迟，并给出延迟的值
-        pre_state = [pre_mem, self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
+        pre_state = (pre_mem, self.pre.firingTime, self.pre.flaglaunch)
+        post_state = (self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch)
 
         # 将突触参数转化为列表
         params_list = list(self.params_syn.values())

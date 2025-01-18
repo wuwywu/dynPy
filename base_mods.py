@@ -466,8 +466,8 @@ class Synapse:
 
     def __call__(self):
         # 触前和突触后的状态
-        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
+        pre_state = (self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch)
+        post_state = (self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch)
 
         return self.forward_sparse(pre_state, post_state)
 
@@ -524,9 +524,7 @@ def syn_electr_sparse(pre_state, post_state, pre_ids, post_ids, weights, *args):
     pre_mem, pre_firingTime, pre_flaglaunch = pre_state
     post_mem, post_firingTime, post_flaglaunch = post_state
 
-    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
-
-     # 计算膜电位差 (vj - vi)
+    # 计算膜电位差 (vj - vi)
     vj_vi = pre_mem[pre_ids] - post_mem[post_ids]
 
     # 计算突触电流贡献
@@ -552,8 +550,6 @@ def syn_chem_sparse(pre_state, post_state, pre_ids, post_ids, weights, *args):
     """
     pre_mem, pre_firingTime, pre_flaglaunch = pre_state
     post_mem, post_firingTime, post_flaglaunch = post_state
-
-    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
 
     # 神经元数量
     num_neurons = len(post_mem)  # 突触后神经元总数

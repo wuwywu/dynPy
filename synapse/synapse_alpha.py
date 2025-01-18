@@ -38,8 +38,6 @@ def syn_chem_alpha_sparse(pre_state, post_state, pre_ids, post_ids, weights, t, 
     pre_mem, pre_firingTime, pre_flaglaunch = pre_state
     post_mem, post_firingTime, post_flaglaunch = post_state
 
-    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
-
     tau_syn, e = params
 
     alpha = (t - pre_firingTime) / tau_syn * np.exp((pre_firingTime - t) / tau_syn)
@@ -71,8 +69,6 @@ def syn_chem_alpha_delay_sparse(pre_state, post_state, pre_ids, post_ids, weight
     # 前节点的状态
     pre_mem, pre_firingTime, pre_flaglaunch = pre_state
     post_mem, post_firingTime, post_flaglaunch = post_state
-
-    pre_ids, post_ids = pre_ids.astype(np.int32), post_ids.astype(np.int32)
 
     tau_syn, e = params
 
@@ -120,8 +116,8 @@ class syn_alpha(Synapse):
 
     def __call__(self):
         # 触前和突触后的状态
-        pre_state = [self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
+        pre_state = (self.pre.vars_nodes[0], self.pre.firingTime, self.pre.flaglaunch)
+        post_state = (self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch)
 
         return self.forward_sparse(pre_state, post_state)
     
@@ -211,8 +207,8 @@ class syn_alpha_delay(Synapse):
         else:
             pre_mem = self.pre.vars_nodes[0]
 
-        pre_state = [pre_mem, self.pre.firingTime, self.pre.flaglaunch.astype(np.float64)]
-        post_state = [self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch.astype(np.float64)]
+        pre_state = (pre_mem, self.pre.firingTime, self.pre.flaglaunch)
+        post_state = (self.post.vars_nodes[0], self.post.firingTime, self.post.flaglaunch)
         params_list = list(self.params_syn.values())
 
         I_post = self.syn(pre_state, post_state, self.pre_ids, self.post_ids, self.w_sparse, self.t, params_list, alpha)  # 突触后神经元接收的突触电流, params_list
