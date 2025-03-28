@@ -9,7 +9,7 @@
 import os
 import sys
 sys.path.append(os.path.dirname(__file__))  # 将文件所在地址放入系统调用地址中
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 import numpy as np
 import matplotlib.pyplot as plt
 from numba import njit, prange
@@ -29,11 +29,11 @@ def FHN_mag_model(vars, t, I, params):
     # 状态变量
     v, w, phi = vars
     # 常数参数
-    a, b, c, k_1, k_2, alpha, beta, u_0, A, w = params
+    a, b, c, k_1, k_2, alpha, beta, u_0, A, omega = params
 
     # 模型方程
     rho = alpha + beta * phi**2
-    u_s = u_0 + A * np.cos(w * t)
+    u_s = u_0 + A * np.cos(omega * t)
     dv_dt = -rho * (v - u_s) - w + v - v*v*v/3 + I[0]
     dw_dt = c * (v + a - b * w) + I[1]
     dphi_dt = -k_1 * (v - u_s) - k_2 * phi + I[2]
@@ -76,8 +76,8 @@ class FHN_mag(Neurons):
             "alpha": .1,
             "beta": .3,
             "u_0": .2,
-            "A": 1.,
-            "w": 0.
+            "A": .8,
+            "omega": .9
         }
         self.th_up = 1    # 放电阈上值
         self.th_down = 1  # 放电阈下值
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     N = 2
     method = "euler"               # "rk4", "euler"
     nodes = FHN_mag(N=N, method=method)  #
-    nodes.params_nodes["w"] = 0.01
+    nodes.params_nodes["omega"] = 0.9
     nodes.params_nodes["A"] = 0.8
     # nodes.N = 3
     # nodes.set_vars_vals([0, 0])
@@ -134,7 +134,7 @@ if __name__ == "__main__":
         nodes()
 
     nodes.record_spike_times = True
-    for i in range(500_00):
+    for i in range(2000_00):
         nodes()
         time.append(nodes.t)
         mem.append(nodes.vars_nodes[0].copy())
