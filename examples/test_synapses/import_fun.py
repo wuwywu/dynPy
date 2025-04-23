@@ -5,8 +5,8 @@ sys.path.append(os.path.dirname(__file__))  # 将文件所在地址放入系统�
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.append(r"../../")
 from nodes.HH import *
-from synapse.synapse_sigmoidal import *
-from synapse.synapse_alpha import *
+from couples.synapse_sigmoidal import *
+from couples.synapse_alpha import *
 from connect.BA_scale_free import *
 from base_mods import *
 from analys.statis.statis_sync import *
