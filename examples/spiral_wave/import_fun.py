@@ -7,3 +7,4 @@ sys.path.append(r"../../")
 from base_mods import *
 from nodes.HR import *
 from connect.spiral_wave_conn import *
+from couples.diffusion2D import *
