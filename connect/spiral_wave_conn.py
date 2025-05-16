@@ -35,10 +35,11 @@ def create_diffusion_No_flow2D_4(Nx, Ny):
         Nx: int, 网络的一维长度。
         Ny: int, 网络的二维长度。
     """
+    def index(i, j, N_j): return i * N_j + j
      # 总节点数
     N = Nx * Ny
     # 初始化扩散矩阵（邻接矩阵），所有值为 0
-    diffusion_matrix = np.zeros((N, N), dtype=np.int32)
+    diffusion_matrix = np.zeros((N, N), dtype=np.int8)
     
     # 遍历每个节点，连接上下左右的邻居
     for i in range(Nx):
@@ -67,10 +68,11 @@ def create_diffusion_No_flow2D_8(Nx, Ny):
         Nx: int, 网络的一维长度。
         Ny: int, 网络的二维长度。
     """
+    def index(i, j, N_j): return i * N_j + j
     # 总节点数
     N = Nx * Ny
     # 初始化扩散矩阵（邻接矩阵），所有值为 0
-    diffusion_matrix = np.zeros((N, N), dtype=np.int32)
+    diffusion_matrix = np.zeros((N, N), dtype=np.int8)
     
     # 遍历每个节点，连接周围的 8 个邻居，考虑无流边界
     for i in range(Nx):
@@ -129,10 +131,11 @@ def create_diffusion_periodic2D_4(Nx, Ny):
         Nx: int, 网络的一维长度。
         Ny: int, 网络的二维长度。
     """
+    def index(i, j, N_j): return i * N_j + j
     # 总节点数
     N = Nx * Ny
     # 初始化扩散矩阵（邻接矩阵），所有值为 0
-    diffusion_matrix = np.zeros((N, N), dtype=np.int32)
+    diffusion_matrix = np.zeros((N, N), dtype=np.int8)
     
     # 遍历每个节点，连接上下左右的邻居，考虑周期边界
     for i in range(Nx):
@@ -165,10 +168,11 @@ def create_diffusion_periodic2D_8(Nx, Ny):
         Nx: int, 网络的一维长度。
         Ny: int, 网络的二维长度。
     """
+    def index(i, j, N_j): return i * N_j + j
     # 总节点数
     N = Nx * Ny
     # 初始化扩散矩阵（邻接矩阵），所有值为 0
-    diffusion_matrix = np.zeros((N, N), dtype=np.int32)
+    diffusion_matrix = np.zeros((N, N), dtype=np.int8)
     
     # 遍历每个节点，连接周围的 8 个邻居，考虑周期边界
     for i in range(Nx):

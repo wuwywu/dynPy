@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from numba import njit, prange
 from scipy.optimize import root
+from scipy.sparse import coo_matrix
 import random
 from PIL import Image
 import io
@@ -517,7 +518,23 @@ def sparse_to_matrix(N_pre, N_post, pre_ids, post_ids, weights):
 
     return conn, weight_matrix
 
-
+# ========= COO 稀疏化 =========
+def to_sparse_matrix(matrix):
+    """
+        sparse_matrix.toarray() 方法将 COO 格式的稀疏矩阵转换为密集矩阵。
+        pre_ids : sparse_matrix.col
+        post_ids : sparse_matrix.row
+        weights : sparse_matrix.data
+    """
+    # 找到非零元素
+    nonzero_indices = np.nonzero(matrix)
+    rows = nonzero_indices[0]
+    cols = nonzero_indices[1]
+    # 获取非零元素的值
+    values = matrix[rows, cols]
+    # 得到 COO-format 稀疏矩阵
+    sparse_matrix = coo_matrix((values, (rows, cols)), shape=matrix.shape)
+    return sparse_matrix
 # ================================= 常用工具 =================================
 # ========= 延迟存储器 =========
 class delayer:
