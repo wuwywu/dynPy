@@ -10,3 +10,4 @@ from nodes.HR import *
 from nodes.FHN import *
 from connect.spiral_wave_conn import *
 from couples.diffusion2D import *
+from analys.spiral.flow_velocity import *
