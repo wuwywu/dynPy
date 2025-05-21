@@ -53,42 +53,46 @@ class FlowVelocity:
                 v_x_size (int): x方向的流速密度大小。
                 v_y_size (int): y方向的流速密度大小。
         """
-        Ny, Nx = v_x_avg.shape
+        return reduce_density(v_x_avg, v_y_avg, v_x_size, v_y_size)
+    
 
-        # Step 1: 补一行一列（复制第1行、第1列）
-        vx_ext = np.vstack([v_x_avg[0:1, :], v_x_avg])       # 顶部复制第1行
-        vx_ext = np.hstack([vx_ext[:, 0:1], vx_ext])         # 左边复制第1列
+def reduce_density(v_x_avg, v_y_avg, v_x_size=30, v_y_size=30):
+    """
+        减少流速密度的函数(块平均法)
 
-        vy_ext = np.vstack([v_y_avg[0:1, :], v_y_avg])
-        vy_ext = np.hstack([vy_ext[:, 0:1], vy_ext])
+        参数：  
+            v_x_avg (ndarray): 平均x方向的流速，形状为(Nx, Ny)。
+            v_y_avg (ndarray): 平均y方向的流速，形状为(Nx, Ny)。
+            v_x_size (int): x方向的流速密度大小。
+            v_y_size (int): y方向的流速密度大小。
+    """
+    Ny, Nx = v_x_avg.shape
 
-        # Step 2: 每块大小（xy） = [block_h]*v_y_size, [block_w]*v_x_size
-        block_h = vx_ext.shape[0] // v_y_size
-        block_w = vx_ext.shape[1] // v_x_size
+    # Step 1: 补一行一列（复制第1行、第1列）
+    vx_ext = np.vstack([v_x_avg[0:1, :], v_x_avg])       # 顶部复制第1行
+    vx_ext = np.hstack([vx_ext[:, 0:1], vx_ext])         # 左边复制第1列
 
-        # Step 3: 裁剪为整除大小
-        H_trim = block_h * v_y_size
-        W_trim = block_w * v_x_size
-        vx_trim = vx_ext[:H_trim, :W_trim]
-        vy_trim = vy_ext[:H_trim, :W_trim]
+    vy_ext = np.vstack([v_y_avg[0:1, :], v_y_avg])
+    vy_ext = np.hstack([vy_ext[:, 0:1], vy_ext])
 
-        # Step 4: reshape 成 block，并对每块求平均
-        vx_blocks = vx_trim.reshape(v_y_size, block_h, v_x_size, block_w)
-        vy_blocks = vy_trim.reshape(v_y_size, block_h, v_x_size, block_w)
+    # Step 2: 每块大小（xy） = [block_h]*v_y_size, [block_w]*v_x_size
+    block_h = vx_ext.shape[0] // v_y_size
+    block_w = vx_ext.shape[1] // v_x_size
 
-        vx_reduced = vx_blocks.mean(axis=(1, 3))  # 对每个 block 的行列平均
-        vy_reduced = vy_blocks.mean(axis=(1, 3))
+    # Step 3: 裁剪为整除大小
+    H_trim = block_h * v_y_size
+    W_trim = block_w * v_x_size
+    vx_trim = vx_ext[:H_trim, :W_trim]
+    vy_trim = vy_ext[:H_trim, :W_trim]
 
-        # Step 5: 还原为原图大小（重复每个值 block_h × block_w 次）
-        vx_full = np.repeat(np.repeat(vx_reduced, block_h, axis=0), block_w, axis=1)
-        vy_full = np.repeat(np.repeat(vy_reduced, block_h, axis=0), block_w, axis=1)
+    # Step 4: reshape 成 block，并对每块求平均
+    vx_blocks = vx_trim.reshape(v_y_size, block_h, v_x_size, block_w)
+    vy_blocks = vy_trim.reshape(v_y_size, block_h, v_x_size, block_w)
 
-        # Step 6: 截取和原图完全一致的大小（即只保留中间部分）
-        vx_full = vx_full[1:Ny+1, 1:Nx+1]
-        vy_full = vy_full[1:Ny+1, 1:Nx+1]
+    vx_reduced = vx_blocks.mean(axis=(1, 3))  # 对每个 block 的行列平均
+    vy_reduced = vy_blocks.mean(axis=(1, 3))
 
-        return vx_reduced, vy_reduced, vx_full, vy_full
-
+    return vx_reduced, vy_reduced
 
 def calculate_gradients(v_dalay, v):
     """
@@ -140,12 +144,12 @@ def calculate_velocity(dv_dx, dv_dy, dv_dt, alpha, n_iterations):
 
     # 迭代
     for _ in range(n_iterations):
-         # 更新速度场（数据项）
+        # 更新速度场（数据项）
         numerator = v_x_avg * dv_dx + v_y_avg * dv_dy + dv_dt
-        denominator = alpha**2 + v_x**2 + v_y**2
+        denominator = alpha**2 + dv_dx**2 + dv_dy**2
 
-        v_x = v_x - dv_dx * numerator / denominator
-        v_y = v_y - dv_dy * numerator / denominator
+        v_x = v_x_avg - dv_dx * numerator / denominator
+        v_y = v_y_avg- dv_dy * numerator / denominator
 
         # 添加无流边界
         v_x_temp = np.pad(v_x, pad_width=1, mode='edge')
@@ -168,5 +172,31 @@ def calculate_velocity(dv_dx, dv_dy, dv_dt, alpha, n_iterations):
                     v_y_temp[2:, 0:-2] + v_y_temp[2:, 2:]
                 ) / 12.0
 
-
     return v_x_avg, v_y_avg
+
+
+if __name__ == "__main__":
+    # 定义简单输入
+    v_now = np.ones((5, 5))
+
+    v_prev = np.ones((5, 5))*2
+    v_prev[0, 0] = 1
+    
+    dvx, dvy, dvt = calculate_gradients(v_prev, v_now)    
+    # print(dvx)
+    # print(dvy)
+    # print(dvt)
+    v_x, v_y = calculate_velocity(dvx, dvy, dvt, alpha=12., n_iterations=2)
+    # vx_reduced, vy_reduced = reduce_density(v_x, v_y, v_x_size=30, v_y_size=30)
+    print("Python 结果：")
+    print("v_x:")
+    print(v_x[:, 0])
+
+    print("v_y:")
+    print(v_y)
+
+    # print("Python 结果：")
+    # print("vx_reduced:")
+    # print(np.round(vx_reduced, 4))
+    # print("vy_reduced:")
+    # print(np.round(vy_reduced, 4))
