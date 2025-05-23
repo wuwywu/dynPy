@@ -71,7 +71,7 @@ def HH_model(vars, t, I, params):
 class HH(Neurons):
     """
         N : 建立神经元的数量
-        method : 计算非线性微分方程的方法，（"euler", "rk4"）
+        method : 计算非线性微分方程的方法，("euler", "heun", "rk4")
         dt : 计算步长
         temperature: 温度(℃)
 
@@ -141,7 +141,7 @@ class HH(Neurons):
 
 if __name__ == "__main__": 
     N = 2
-    method = "euler"               # "rk4", "euler"
+    method = "heun"              # "rk4", "euler", "heun"
     nodes = HH(N=N, method=method)  # , temperature=6.3
     nodes.params_nodes["Iex"] = 10.
     # nodes.N = 3

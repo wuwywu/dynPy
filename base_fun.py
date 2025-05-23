@@ -73,6 +73,31 @@ def Euler(fun, x0, t, dt, *args):
     return x0
 
 @njit
+def Heun(fun, x0, t, dt, *args):
+    """
+    使用 Heun 方法计算一个时间步后系统的状态。
+    args:
+        fun: 微分方程函数，形式为 fun(x, t, *args)
+        x0: 上一个时间单位的状态变量 (numpy.ndarray)
+        t: 当前时间
+        dt: 时间步长
+    return:
+        x1 (numpy.ndarray): 下一个时间单位的状态变量
+    """
+    # 计算当前点的斜率
+    k1 = fun(x0, t, *args)
+    
+    # 使用 Euler 法预测值
+    x_pred = x0 + dt * k1
+    
+    # 在预测点上计算新的斜率
+    k2 = fun(x_pred, t + dt, *args)
+    
+    # 加权平均斜率得到新的状态
+    x0 += 0.5 * dt * (k1 + k2)
+    return x0
+
+@njit
 def RK4(fun, x0, t, dt, *args):
     """
     使用 Runge-Kutta 方法计算一个时间步后系统的状态。

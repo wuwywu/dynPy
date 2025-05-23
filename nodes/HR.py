@@ -42,7 +42,7 @@ def HR_model(vars, t, I, params):
 class HR(Neurons):
     """
         N : 建立神经元的数量
-        method : 计算非线性微分方程的方法，（"euler", "rk4"）
+        method : 计算非线性微分方程的方法，("euler", "heun", "rk4")
         dt : 计算步长
         temperature: 温度(℃)
 
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     N = 2
     dt = 0.01
-    method = "rk4"  # "rk4", "euler"
+    method = "rk4"  # "rk4", "euler", "heun"
     nodes = HR(N=N, method=method, dt=dt)
     nodes.set_vars_vals([0.1, 0.1, 0.1])
     # print(nodes.vars_nodes)

@@ -58,7 +58,7 @@ class syn_sigmoidal(Synapse):
         post    :    网络后节点
         conn    :    连接矩阵   (size  : [post_N, pre_N])
         synType :    突触类型   ("electr", "chem_sigmoidal")
-        method  :    计算非线性微分方程的方法，("euler", "rk4", "discrete")
+        method  :    计算非线性微分方程的方法，("euler", "heun", "rk4", "discrete")
     """
     def __init__(self, pre, post, conn=None, synType="chem_sigmoidal", method="euler"):
         super().__init__(pre=pre, post=post, conn=conn, synType=synType, method=method)
@@ -108,7 +108,7 @@ class syn_sigmoidal_delay(Synapse):
         post    :    网络后节点
         conn    :    连接矩阵   (size  : [post_N, pre_N])
         synType :    突触类型   ("electr", "chem_sigmoidal")
-        method  :    计算非线性微分方程的方法，("euler", "rk4", "discrete")
+        method  :    计算非线性微分方程的方法，("euler", "heun", "rk4", "discrete")
         delayer :    突触延迟器
     """
     def __init__(self, pre, post, conn=None, synType="chem_sigmoidal", method="euler", delayN=0):

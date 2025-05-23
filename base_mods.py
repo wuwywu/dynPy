@@ -57,7 +57,7 @@ from base_fun import *
 class Neurons:
     """
         N : 建立神经元的数量
-        method : 计算非线性微分方程的方法，("euler", "rk4", "discrete")
+        method : 计算非线性微分方程的方法，("euler", "heun", "rk4", "discrete")
         dt : 计算步长
 
         params_f (dict): 节点模型参数
@@ -69,7 +69,7 @@ class Neurons:
         self.dt = dt
         # 选择数值计算方法
         self._method = method
-        method_map = {"euler": Euler, "rk4": RK4, "discrete": discrete}
+        method_map = {"euler": Euler, "heun": Heun, "rk4": RK4, "discrete": discrete}
         if method not in method_map:
             raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
         self.method = method_map[method]
@@ -291,7 +291,7 @@ def model(vars, t, I, params):
 class Nodes:
     """
         N: 创建节点的数量
-        method : 计算非线性微分方程的方法，("euler", "rk4", "discrete")
+        method : 计算非线性微分方程的方法，("euler", "heun", "rk4", "discrete")
         dt : 计算步长
 
         t (float): 模拟的理论时间
@@ -301,7 +301,7 @@ class Nodes:
         self.dt = dt
         # 选择数值计算方法
         self._method = method
-        method_map = {"euler": Euler, "rk4": RK4, "discrete": discrete}
+        method_map = {"euler": Euler, "heun": Heun, "rk4": RK4, "discrete": discrete}
         if method not in method_map:
             raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
         self.method = method_map[method]
@@ -431,12 +431,12 @@ class Synapse:
         post    :    网络后节点
         conn    :    连接矩阵   (size  : [post_N, pre_N])
         synType :    突触类型   ("electr", "chem")
-        method  :    计算非线性微分方程的方法，("euler", "rk4", "discrete")
+        method  :    计算非线性微分方程的方法，("euler", "heun", "rk4", "discrete")
     """
     def __init__(self, pre, post, conn=None, synType="electr", method="euler"):
         # 选择数值计算方法
         self._method = method
-        method_map = {"euler": Euler, "rk4": RK4, "discrete": discrete}
+        method_map = {"euler": Euler, "heun": Heun, "rk4": RK4, "discrete": discrete}
         if method not in method_map:
             raise ValueError(f"无效选择，method 必须是 {list(method_map.keys())}")
         self.method = method_map[method]
