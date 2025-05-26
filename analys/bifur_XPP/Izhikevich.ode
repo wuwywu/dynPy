@@ -1,0 +1,23 @@
+# Izhikevich Neuron Model for bifurcation analysis
+
+dv/dt = 0.04*v^2 + 5*v + 140 - u + I
+du/dt = a*(b*v - u)
+
+# 膜电位阈值(1:从负到正；-1:从正到负)
+global 1 v-30 {v=c;u=u+d}
+
+# 参数
+param I=10 
+a=0.02  
+b=0.2   
+c=-65  
+d=8    
+ 
+
+# 初始条件
+init v=-70, u=0
+
+# 模拟与显示设置, xp=I, yp=v
+@ method=rungekutta, dt=0.01, total=500, xlo=0, xhi=20, ylo=-80, yhi=40
+
+done

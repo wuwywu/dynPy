@@ -1,0 +1,14 @@
+# fhn.ode
+# FitzHugh-Nagumo model for bifurcation analysis
+
+dv/dt=v - (v^3)/3 - w + I
+dw/dt=0.08*(v + 0.7 - 0.8*w)
+
+param I=0.5
+
+init v=-1, w=1
+
+# 给定x轴个y轴(xp, yp) 给定演算法(method,  dt) 给定初始计算范围(total, xlo,  xhi, ylo, yhi)
+@method=euler,dt=0.1,xp=w,yp=v,total=500,xlo=-2,xhi=2,ylo=-2,yhi=2
+
+done
