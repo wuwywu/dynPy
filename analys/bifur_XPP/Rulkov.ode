@@ -1,0 +1,18 @@
+# rulkov_map.ode
+
+x' = alpha / (1 + x^2) + y
+y' = y - sigma * x - beta
+
+# 参数设置
+param alpha=4.1
+param sigma=0.001
+param beta=0.001
+
+# 初始值
+init x=-1.5, y=-2.5
+
+# 显示与仿真控制, xp=alpha, yp=x, xlo=3.5, xhi=4.5
+@ method=discrete, total=500, ylo=-3, yhi=3
+@ transient=100
+
+done
