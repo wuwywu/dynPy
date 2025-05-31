@@ -483,26 +483,20 @@ def matrix_to_sparse(conn, weight_matrix=None):
         - post_ids  : 后节点的id
         - weights   : 节点对的权重
     """
-    # 将 conn 转换为二元矩阵
-    binary_conn = np.where(conn != 0, 1, 0)
-  
-    # 如果未提供权重矩阵，则默认为全1矩阵
+    # 获取非零连接（即有边）的位置
+    post_ids, pre_ids = np.nonzero(conn)
+
+    # 如果没有提供权重，使用全1
     if weight_matrix is None:
-        weight = np.ones_like(conn, dtype=np.float64)
+        weights = np.ones_like(post_ids, dtype=np.float64)
     else:
-        weight = np.asarray(weight_matrix, dtype=np.float64)
-
-    # 确保 binary_conn 和 weight_matrix 形状一致
-    if binary_conn.shape != weight.shape:
-        raise ValueError("binary_conn 和 weight_matrix 的形状必须一致！")
-  
-    # 提取非零元素的行列索引
-    post_ids, pre_ids = np.nonzero(binary_conn)
-
-    # 提取对应权重
-    rows, cols = weight.shape
-    indices =  post_ids * rows + pre_ids  # 计算一维索引
-    weights = weight.ravel()[indices]  # 一维索引提取权重
+        # 强制转换为float64类型的权重矩阵
+        weight = weight_matrix.astype(np.float64)
+        
+        # 根据非零位置获取对应权重
+        weights = np.empty_like(post_ids, dtype=np.float64)
+        for i in range(post_ids.shape[0]):
+            weights[i] = weight[post_ids[i], pre_ids[i]]
 
     # 将结果整合为一个三列矩阵
     # ids_and_weights = np.vstack((pre_ids, post_ids, weights))
