@@ -1,0 +1,38 @@
+# Rössler-type Oscillator model with piecewise g
+# ref: I. Leyva, et al. Explosive first-order transition to synchrony in networked chaotic oscillators, Phys. Rev. Lett. 108 (2012) 168702. https://doi.org/10.1103/PhysRevLett.108.168702.
+
+
+# Equations
+g_x =  if (x <= 3) then (0) else (mu*(x - 3))
+
+dx/dt = Gamma*(-alpha*x - z - beta*y)
+dy/dt = Gamma*(x - (0.02 - 10/R)*y)
+dz/dt = Gamma*(g_x - z)
+
+
+# Parameters
+param alpha = 0.05
+param beta = 0.5
+# chaos(R: 55-110)
+param R = 100
+param mu = 15
+param Gamma = 10000
+
+# Initial conditions
+init x = 0.1
+init y = 0.2
+init z = 0.3
+
+# Time
+@ total=10, dt=0.0001, xlo=0, xhi=15, ylo=-4.2, yhi=4.2
+# @ transient=200
+
+# show
+@ xp=T, yp=x
+
+# Output options
+@ bounds=50000
+# @ maxstor=10000
+@ method=rungekutta
+
+done
