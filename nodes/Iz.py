@@ -61,7 +61,7 @@ class Iz(Neurons):
             u = u + d
 
         N : 建立神经元的数量
-        method : 计算非线性微分方程的方法，("euler", "heun", "rk4")
+        method : 计算非线性微分方程的方法，("euler", "heun", "rk4", "rkf45")
         dt : 计算步长
 
         params_nodes (dict): 节点模型参数
@@ -127,8 +127,10 @@ class Iz(Neurons):
 
 if __name__ == "__main__":
     N = 2
-    method = "euler"               # "rk4", "euler", "heun"
-    nodes = Iz(N=N, method=method)  # , temperature=6.3
+    method = "rkf45"               # "rk4", "euler", "heun", "rkf45"
+    dt = 0.01
+
+    nodes = Iz(N=N, method=method, dt=dt)  # , temperature=6.3
     nodes.params_nodes["Iex"] = 20.
     # nodes.set_vars_vals([0])
     # print(nodes.vars_nodes)

@@ -44,7 +44,7 @@ def Lorenz_model(vars, t, I, params):
 class Lorenz(Nodes):
     """
         N : 建立神经元的数量
-        method : 计算非线性微分方程的方法，("euler", "heun", "rk4")
+        method : 计算非线性微分方程的方法，("euler", "heun", "rk4", "rkf45")
         dt : 计算步长(dt=.01)
 
         params_nodes (dict): 节点模型参数
@@ -100,7 +100,7 @@ class Lorenz(Nodes):
 if __name__ == "__main__":
     N = 2
     dt = 0.01
-    method = "rk4"  # "rk4", "euler", "heun"
+    method = "rkf45"  # "rk4", "euler", "heun", "rkf45"
     nodes = Lorenz(N=N, method=method, dt=dt)
     # nodes.set_vars_vals([0])
     # print(nodes.vars_nodes)

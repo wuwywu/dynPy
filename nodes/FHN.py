@@ -68,7 +68,7 @@ def FHN_mag_model(vars, t, I, params):
 class FHN(Neurons):
     """
         N : 建立神经元的数量
-        method : 计算非线性微分方程的方法，("euler", "heun", "rk4")
+        method : 计算非线性微分方程的方法，("euler", "heun", "rk4", "rkf45")
         dt : 计算步长
 
         params_nodes (dict): 节点模型参数
@@ -133,7 +133,7 @@ class FHN(Neurons):
 class FHN_mag(Neurons):
     """
         N : 建立神经元的数量
-        method : 计算非线性微分方程的方法，("euler", "heun", "rk4")
+        method : 计算非线性微分方程的方法，("euler", "heun", "rk4", "rkf45")
         dt : 计算步长
 
         params_nodes (dict): 节点模型参数
@@ -204,7 +204,8 @@ class FHN_mag(Neurons):
 
 if __name__ == "__main__":
     N = 2
-    method = "heun"              # "rk4", "euler", "heun"
+    method = "rkf45"              # "rk4", "euler", "heun", "rkf45"
+
     nodes = FHN(N=N, method=method)  #
     # nodes.params_nodes["Iex"] = 1.
     nodes = FHN_mag(N=N, method=method)  #

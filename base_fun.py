@@ -5,25 +5,13 @@
 # File      : base_fun.py
 # 文件中包含：
 
-import os
-import sys
-sys.path.append(os.path.dirname(__file__))  # 将文件所在地址放入系统调用地址中
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from numba import njit, prange
-from scipy.optimize import root
-from scipy.sparse import coo_matrix
-import random
-from PIL import Image
-import io
-
 """
 数值模拟算法(欧拉，龙格库塔，离散):
     1). euler 方法 : Euler
-    2). rk4 方法   : RK4
-    3). 离散方法    : discrete
+    2). heun 方法  : Heun
+    3). rk4 方法   : RK4
+    4). rk45 方法  : RK45
+    5). 离散方法    : discrete
 """
 
 """
@@ -41,6 +29,7 @@ import io
 突触模型中的函数工具
     1). 矩阵转稀疏矩阵      : matrix_to_sparse
     2). 稀疏矩阵转矩阵      : sparse_to_matrix 
+    3). COO 格式的稀疏矩阵转换 : to_sparse_matrix
 """
 
 """
@@ -53,6 +42,20 @@ import io
     6). 螺旋波动态显示器        :   spiral_wave_display
     7). 状态变量(膜电位)动态显示器  :   state_variable_display
 """
+
+import os
+import sys
+sys.path.append(os.path.dirname(__file__))  # 将文件所在地址放入系统调用地址中
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from numba import njit, prange
+from scipy.optimize import root
+from scipy.sparse import coo_matrix
+import random
+from PIL import Image
+import io
 
 
 # ================================= 演算法 =================================
@@ -115,6 +118,67 @@ def RK4(fun, x0, t, dt, *args):
     k4 = fun(x0 + dt * k3, t + dt, *args)
 
     x0 += (dt / 6.) * (k1 + 2 * k2 + 2 * k3 + k4)
+
+    return x0
+
+@njit
+def RKF45(fun, x0, t, dt, *args):
+    """
+    使用 Runge-Kutta-Fehlberg 45 方法计算一个时间步后的系统状态（固定步长）。
+    
+    输入：
+        fun: 微分方程函数 fun(x, t, *args)
+        x0 : 当前状态 (numpy.ndarray)
+        t  : 当前时间
+        dt : 时间步长
+        args: 额外参数
+    输出：
+        x0 : 下一个时间步的状态（使用五阶公式）
+    """
+    # 每个子步骤的时间因子
+    c2 = 1/4
+    c3 = 3/8
+    c4 = 12/13
+    c5 = 1.0
+    c6 = 1/2
+
+    # 子步骤的系数（Butcher tableau）
+    a21 = 1/4
+
+    a31 = 3/32
+    a32 = 9/32
+
+    a41 = 1932/2197
+    a42 = -7200/2197
+    a43 = 7296/2197
+
+    a51 = 439/216
+    a52 = -8
+    a53 = 3680/513
+    a54 = -845/4104
+
+    a61 = -8/27
+    a62 = 2
+    a63 = -3544/2565
+    a64 = 1859/4104
+    a65 = -11/40
+
+    # 五阶系数（用于最终更新）
+    b1 = 16/135
+    b2 = 0
+    b3 = 6656/12825
+    b4 = 28561/56430
+    b5 = -9/50
+    b6 = 2/55
+
+    k1 = dt * fun(x0, t, *args)
+    k2 = dt * fun(x0 + a21 * k1, t + c2 * dt, *args)
+    k3 = dt * fun(x0 + a31 * k1 + a32 * k2, t + c3 * dt, *args)
+    k4 = dt * fun(x0 + a41 * k1 + a42 * k2 + a43 * k3, t + c4 * dt, *args)
+    k5 = dt * fun(x0 + a51 * k1 + a52 * k2 + a53 * k3 + a54 * k4, t + c5 * dt, *args)
+    k6 = dt * fun(x0 + a61 * k1 + a62 * k2 + a63 * k3 + a64 * k4 + a65 * k5, t + c6 * dt, *args)
+
+    x0 += b1 * k1 + b3 * k3 + b4 * k4 + b5 * k5 + b6 * k6
 
     return x0
 
@@ -554,6 +618,8 @@ def to_sparse_matrix(matrix):
     # 得到 COO-format 稀疏矩阵
     sparse_matrix = coo_matrix((values, (rows, cols)), shape=matrix.shape)
     return sparse_matrix
+
+
 # ================================= 常用工具 =================================
 # ========= 延迟存储器 =========
 class delayer:
