@@ -387,6 +387,67 @@ class show_state:
         plt.show()  # 停止交互模式，显示最终图像
 
 
+# ========= 拟合幂律曲线 =========
+import powerlaw
+def fit_power_law_distribution(adj_mat, plot=False):
+    """
+        使用邻接矩阵 adj_mat 拟合网络的度分布幂律，并绘图。
+        
+        参数:
+            adj_mat  : 网络的邻接矩阵 (NumPy 2D 数组)
+            plot     : 是否绘制图像
+        
+        返回:
+            (A, gamma) : 拟合得到的幂律参数
+            xmin       : 拟合起点
+    """
+    # 1. 获取所有节点的度，转为 NumPy 数组
+    degrees = np.sum(adj_mat, axis=1).astype(int)
+    
+    # 2. 统计每种度 k 出现的次数，得到度分布 P(k)
+    degree_count = np.array(np.unique(degrees, return_counts=True)).T
+    k = degree_count[:, 0]
+    Pk = degree_count[:, 1] / np.sum(degree_count[:, 1])
+
+    # 3. 使用 powerlaw.Fit 进行幂律拟合（最大似然估计）
+    #    discrete=True 表示度数是离散变量，自动估计 γ 和 xmin
+    fit = powerlaw.Fit(degrees, discrete=True)
+    alpha = fit.power_law.alpha
+    xmin = fit.power_law.xmin
+
+    # 4. 估计归一化系数 A
+    #    使用 k = xmin 附近的 P(k) 和拟合公式 P(k) ≈ A * k^(-γ)
+    if np.any(k >= xmin):
+        A = Pk[k >= xmin][0] * xmin**alpha
+    else:
+        A = 1.0  # 若没有满足 k ≥ xmin 的数据则默认设为 1
+
+    # 输出拟合结果
+    print(f"拟合结果: A ≈ {A:.4f}, γ = {alpha:.4f}, xmin = {xmin}")
+
+    # 生成拟合曲线
+    if plot:
+        plt.figure(figsize=(8, 5))
+        plt.scatter(k, Pk, color='red', label='Original Data')
+
+        # 拟合曲线
+        k_fit = k
+        Pk_fit = A * np.power(k_fit, -alpha)
+        plt.plot(k_fit, Pk_fit, label=f'Fitted Power Law (γ = {alpha:.2f})')
+
+        plt.xlabel('Degree (k)')
+        plt.ylabel('P(k)')
+        # plt.xscale('log')
+        # plt.yscale('log')
+        plt.title('Degree Distribution with Power Law Fit')
+        plt.legend()
+        plt.grid(True, which='both', ls='--')
+        plt.tight_layout()
+        plt.show()
+
+    return (A, alpha), xmin
+
+
 if __name__ == "__main__":
     N = 1
     noisee = noiser(D_noise=0.01, dt=0.01, N=N, type="white")
