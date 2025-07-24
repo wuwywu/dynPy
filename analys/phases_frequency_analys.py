@@ -12,6 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import copy
 import numpy as np
 from scipy.signal import hilbert
+from scipy.signal import find_peaks, detrend
 import matplotlib.pyplot as plt
 
 
@@ -58,17 +59,85 @@ def calculate_complete_phases(phases):
     return np.array(complete_phases)
 
 
+def calculate_mean_frequency(signal, time, threshold=None, min_distance=None, detrend_signal=True):
+    """
+    从原始信号计算平均频率
+    
+    参数:
+    signal: 输入信号数组 [Ntime, ]
+    time: 时间数组 [Ntime, ]，与信号对应
+    threshold: 检测峰值的阈值，None时自动计算
+    min_distance: 两个峰值之间的最小样本数(少于这个距离的峰值将被忽略)
+    detrend_signal: 是否对信号进行去趋势处理
+    
+    返回:
+    mean_freq: 平均频率 (Hz)
+    peak_times: 检测到的峰值时间点
+    peak_indices: 检测到的峰值在信号中的索引
+    """
+    # 确保输入是numpy数组
+    signal = np.asarray(signal)
+    time = np.asarray(time)
+    
+    # 检查输入长度是否匹配
+    if len(signal) != len(time):
+        raise ValueError("信号和时间数组长度必须相同")
+    
+    # 去趋势处理，减少基线漂移影响
+    if detrend_signal:
+        signal = detrend(signal)
+    
+    # 检测信号峰值（假设信号的峰值代表放电事件）
+    peak_indices, _ = find_peaks(
+        signal, 
+        height=threshold, 
+        distance=min_distance
+    )
+
+    # 如果没有检测到足够的峰值，返回0
+    if len(peak_indices) < 2:
+        return 0.0, np.array([]), peak_indices
+    
+    # 获取峰值对应的时间点
+    peak_times = time[peak_indices]
+    
+    # 计算总时间（从第一个峰值到最后一个峰值）
+    total_duration = peak_times[-1] - peak_times[0]
+    
+    # 避免除以零
+    if total_duration <= 0:
+        return 0.0, peak_times, peak_indices
+    
+    # 计算平均频率：(峰值数量-1) / 总持续时间
+    # 减1是因为n个峰值有n-1个间隔
+    mean_freq = (len(peak_times) - 1) / total_duration
+    
+    return mean_freq, peak_times, peak_indices
+
+
 if __name__ == "__main__":
     # 生成多个示例信号
     t = np.linspace(0, 10, 1000)
-    # signal1 = np.sin(2 * np.pi * 2 * t)
-    # signal2 = np.cos(2 * np.pi * 3 * t)
     signal1 = np.sin(2 * np.pi * 2 * t) + 0.5 * np.sin(2 * np.pi * 5 * t)
     signal2 = np.cos(2 * np.pi * 3 * t) + 0.3 * np.cos(2 * np.pi * 4 * t)
 
     signals = np.array([signal1, signal2])
 
     amplitudes, phases, instantaneous_frequencies = tohilbert(signals, t)
+
+    # # 计算平均频率
+    t = np.linspace(0, 10, 1000)
+    freq = 5
+    signal = np.sin(2 * np.pi * freq * t)
+    # signal = np.cos(2 * np.pi * 3 * t)
+    mean_freq, peak_times, peak_indices = calculate_mean_frequency(
+        signal, 
+        t
+    )
+    
+    print(f"检测到 {len(peak_times)} 个峰值")
+    print(f"计算得到的平均频率: {mean_freq:.2f} Hz")
+    print(f"理论频率: {freq} Hz")
 
     # 绘制结果
     fig, axs = plt.subplots(4, 2, figsize=(14, 8))
