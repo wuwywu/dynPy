@@ -115,6 +115,10 @@ if __name__ == "__main__":
     nodes.set_vars_vals([0.1, 0.1, 0.1])
     # print(nodes.vars_nodes)
 
+    nodes.extend_params()  # 扩展参数
+
+    print(nodes.params_nodes)
+
     for i in range(200_00):
         nodes()
 

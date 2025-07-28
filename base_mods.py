@@ -96,6 +96,20 @@ class Neurons:
         self.spike_times = np.full((self.N, self.max_spikes), np.nan)
         self.spike_counts = np.zeros(self.N, dtype=np.int32)   # 放电次数计数
 
+    def extend_params(self):
+        """
+            扩展参数
+            将 params_nodes 中的参数扩展到每个神经元
+
+            注：
+            调节每个节点的参数值前需要调用此函数(参数造成得网络异质性)
+
+            例如：
+            将 params_nodes["Iex"] = 10. 扩展为 params_nodes["Iex"] = [10., 10., ..., 10.]
+        """
+        for param in self.params_nodes:
+            self.params_nodes[param] *= np.ones(self.N)
+
     def __call__(self, Io=0, axis=[0]):
         """
         args:
@@ -317,6 +331,20 @@ class Nodes:
 
     def _vars_f(self):
         self.t = 0.  # 运行时间
+
+    def extend_params(self):
+        """
+            扩展参数
+            将 params_nodes 中的参数扩展到每个神经元
+
+            注：
+            调节每个节点的参数值前需要调用此函数(参数造成得网络异质性)
+            
+            例如：
+            将 params_nodes["Iex"] = 10. 扩展为 params_nodes["Iex"] = [10., 10., ..., 10.]
+        """
+        for param in self.params_nodes:
+            self.params_nodes[param] *= np.ones(self.N)
 
     def __call__(self, Io=0, axis=[0]):
         """

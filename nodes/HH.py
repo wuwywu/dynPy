@@ -149,6 +149,10 @@ if __name__ == "__main__":
     # nodes._vars_f()
     # print(nodes.vars_nodes)
 
+    nodes.extend_params()  # 扩展参数
+
+    print(nodes.params_nodes)
+    
     time = []
     mem = []
     for i in range(100_00):
