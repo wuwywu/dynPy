@@ -112,14 +112,14 @@ def matrix_to_sparse_3d(conn, weight_matrix=None):
         raise ValueError("binary_conn 和 weight_matrix 的形状必须一致！")
   
     # 提取非零元素的行列索引
-    post_ids, pre_ids, pre2_ids = np.nonzero(binary_conn)
+    post_ids, pre_ids1, pre_ids2 = np.nonzero(binary_conn)
 
     # 提取对应权重
     rows, cols, depth = weight.shape
-    indices = post_ids * rows * cols + pre_ids * cols + pre2_ids
+    indices = post_ids * rows * cols + pre_ids1 * cols + pre_ids2
     weights = weight.ravel()[indices]  # 一维索引提取权重
     # 将结果整合为一个三列矩阵
     # ids_and_weights = np.vstack((pre_ids, pre2_ids, post_ids, weights))
 
-    return pre_ids, pre2_ids, post_ids, weights
+    return pre_ids1, pre_ids2, post_ids, weights
 
