@@ -81,9 +81,9 @@ class HP(Nodes):
     def _vars(self):
         self.t = 0.  # 运行时间
         # 模型变量的初始值
-        self.x0 = np.random.rand(self.N)
-        self.y0 = np.random.rand(self.N)
-        self.z0 = np.random.rand(self.N)
+        self.x0 = np.random.rand(self.N) + 0.4
+        self.y0 = np.random.rand(self.N) + 0.2
+        self.z0 = np.random.rand(self.N) + 9
         self.vars_nodes = np.vstack((self.x0, self.y0, self.z0))
 
         self.N_vars = 3  # 变量的数量
@@ -112,14 +112,15 @@ if __name__ == "__main__":
     dt = 0.01
     method = "rk4"  # "rk4", "euler", "heun", "rkf45"
     nodes = HP(N=N, method=method, dt=dt)
-    nodes.set_vars_vals([0.1, 0.1, 0.1])
+    # 这个模型一定要注意初始值
+    nodes.set_vars_vals([0.4, 0.2, 9])
     # print(nodes.vars_nodes)
 
     nodes.extend_params()  # 扩展参数
 
     print(nodes.params_nodes)
 
-    for i in range(200_00):
+    for i in range(2000_00):
         nodes()
 
     nodes.vars_nodes[0, 0] += 1e-3
@@ -127,7 +128,7 @@ if __name__ == "__main__":
     time = []
     mem = []
 
-    for i in range(200_00):
+    for i in range(1500_00):
         nodes()
         time.append(nodes.t)
         mem.append(nodes.vars_nodes[0].copy())
