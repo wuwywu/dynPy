@@ -123,3 +123,126 @@ def matrix_to_sparse_3d(conn, weight_matrix=None):
 
     return pre_ids1, pre_ids2, post_ids, weights
 
+
+## 通过张量写出广义的 Laplacian 矩阵
+### numba版
+@njit
+def laplacian_from_tensor(A):
+    """
+    A: (N, N, ..., N) 的 (d+1) 阶邻接张量
+       A[i, j1, ..., jd] = a^{(d)}_{i j1...jd}
+
+    返回:
+        L  : (N, N)  的广义 Laplacian
+        Ki : (N,)    的 K_i^{(d)}
+        Kij: (N, N)  的 K_{ij}^{(d)}
+    """
+    D = A.ndim          # = d+1
+    N = A.shape[0]
+    d = D - 1           # 公式里的 d
+
+    # ---- 阶乘 d! 和 (d-1)!，纯循环 ----
+    fact_d = 1
+    for k in range(2, d + 1):
+        fact_d *= k
+
+    fact_d1 = 1
+    for k in range(2, d):
+        fact_d1 *= k
+    if d == 1:
+        fact_d1 = 1     # 0! = 1
+
+    # ---- 结果数组 ----
+    Ki  = np.zeros(N)          # (N,)
+    Kij = np.zeros((N, N))     # (N, N)
+
+    # ---- 一次性遍历 A 的所有元素，线性索引 -> 多维索引 ----
+    A_flat = A.ravel()
+    total  = A_flat.size
+
+    idx = np.empty(D, np.int64)
+
+    for p in range(total):
+        v = A_flat[p]
+
+        # 还原 p 对应的 (i, j1, ..., jd)
+        r = p
+        for dim in range(D - 1, -1, -1):
+            idx[dim] = r % N
+            r //= N
+
+        i0 = idx[0]   # 第一个指标 i
+        j0 = idx[1]   # 第二个指标 j
+
+        # ∑_{j1...jd} a_{i j1...jd}  -> Ki
+        Ki[i0] += v
+
+        # ∑_{j1...j_{d-1}} a_{i j j1...} -> Kij
+        # 这里统一处理：不区分 d=1 或 d>1，第二个指标就是 j
+        Kij[i0, j0] += v
+
+    # ---- 归一化得到 K_i^{(d)} 和 K_{ij}^{(d)} ----
+    Ki = Ki / fact_d
+
+    Kij = Kij / fact_d1
+
+    # ---- 构造 L^{(d)} ----
+    L = np.zeros((N, N))
+    for i in range(N):
+        for j in range(N):
+            if i != j:
+                # off-diagonal: - (d-1)! * K_ij^{(d)}
+                L[i, j] = -fact_d1 * Kij[i, j]
+            else:
+                # diagonal: d! * K_i^{(d)}
+                L[i, j] = fact_d * Ki[i]
+
+    return L, Ki, Kij
+
+### 非numba版
+def laplacian_from_tensor(A):
+    """
+    A: (N, N, ..., N) 的 (d+1) 阶邻接张量
+       A[i, j1, ..., jd] = a^{(d)}_{i j1...jd}
+
+    返回:
+        L  : (N, N)  的广义 Laplacian
+        Ki : (N,)    的 K_i^{(d)}  （已经除以 d!）
+        Kij: (N, N)  的 K_{ij}^{(d)}（已经除以 (d-1)!）
+    """
+    A = np.asarray(A)
+    D = A.ndim          # = d+1
+    if D < 2:
+        raise ValueError("A 至少需要是 2 阶张量 (N,N,...)")
+
+    N = A.shape[0]
+    d = D - 1           # 公式里的 d
+
+    # ---- 阶乘 d! 和 (d-1)! ----
+    fact_d  = math.factorial(d)
+    fact_d1 = math.factorial(d - 1) if d > 1 else 1  # 0! = 1
+
+    # ---- Ki: 按 j1...jd 求和，再除以 d! ----
+    # 轴 1..D-1 全部求和，保留 i 这一维
+    sum_axes_Ki = tuple(range(1, D))
+    Ki = A.sum(axis=sum_axes_Ki) / fact_d           # 形状 (N,)
+
+    # ---- Kij: 按 j2...jd 求和，再除以 (d-1)! ----
+    if d == 1:
+        # d=1 时，Kij^{(1)} = a_{ij} 本身（除以 0! = 1 不变）
+        Kij = A.astype(float, copy=True)            # 形状 (N,N)
+    else:
+        # 对轴 2..D-1 求和，保留 i 和 j1（此时记为 j）
+        sum_axes_Kij = tuple(range(2, D))
+        Kij = A.sum(axis=sum_axes_Kij) / fact_d1    # 形状 (N,N)
+
+    # ---- 构造 L^{(d)} ----
+    # 先用非对角公式：L_ij = - (d-1)! * K_ij^{(d)}
+    L = -fact_d1 * Kij
+
+    # 再把对角改成：L_ii = d! * K_i^{(d)}
+    # np.fill_diagonal 会就地修改
+    np.fill_diagonal(L, fact_d * Ki)
+
+    return L, Ki, Kij
+
