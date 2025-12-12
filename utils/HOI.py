@@ -9,6 +9,8 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from numba import njit, prange
+import xgi
+import networkx as nx
 
 
 # 构建高阶网络(二阶，三维矩阵)
@@ -247,3 +249,64 @@ def laplacian_from_tensor(A):
 
     return L, Ki, Kij
 
+### 从列表中计算广义的 Laplacian 矩阵
+def laplacian_from_list(N, hyperedges, order=2, weights=None, dtype=np.float32):
+    """
+    根据 k 阶超边集合构造拉普拉斯矩阵（clique expansion）
+    自动判断是否提供权重
+
+    参数
+    ----
+    N : int
+        节点总数
+    hyperedges : array-like, shape (M, k)
+        k 阶超边集合
+    order : int
+        超边阶数
+    weights : None or array-like, shape (M,)
+        每条超边的权重；若为 None，则默认全为 1
+    dtype : numpy dtype
+
+    返回
+    ----
+    A : (N, N) 邻接矩阵
+    D : (N, N) 度矩阵
+    L : (N, N) 拉普拉斯矩阵
+    """
+    k = order+1
+    hyperedges = np.asarray(hyperedges, dtype=np.int64)
+
+    if hyperedges.ndim != 2 or hyperedges.shape[1] != k:
+        raise ValueError(f"hyperedges 形状应为 (M, {k})")
+
+    M = hyperedges.shape[0]
+
+    # ---------- 判断是否有权重 ----------
+    if weights is None:
+        weights = np.ones(M, dtype=dtype)
+    else:
+        weights = np.asarray(weights, dtype=dtype)
+        if weights.shape[0] != M:
+            raise ValueError("weights 的长度必须与超边条数一致")
+
+    # ---------- 构造邻接矩阵 ----------
+    A = np.zeros((N, N), dtype=dtype)
+
+    for e, w in zip(hyperedges, weights):
+        for i in range(k):
+            u = e[i]
+            for j in range(i + 1, k):
+                v = e[j]
+                A[u, v] += w
+                A[v, u] += w
+
+    # ---------- 拉普拉斯 ----------
+    degree = A.sum(axis=1)
+    D = np.diag(degree)
+    L = D - A
+
+    return A, D, L
+
+### 通过 xgi 和 networkx 计算
+# xgi.linalg.laplacian(H, order=1, sparse=False, rescale_per_node=False, index=False)
+# nx.linalg.laplacian_matrix(G, nodelist=None, weight='weight')
