@@ -39,9 +39,9 @@
     3). 噪声产生器              :   noiser
     4). 极大极小值              :   find_extrema
     5). numba版计算特征值       :   eigval_qr
-    6). 螺旋波动态显示器        :   spiral_wave_display
-    7). 状态变量(膜电位)动态显示器  :   state_variable_display
-    8). 
+    6). 螺旋波动态显示器        :   show_spiral_wave
+    7). 状态变量(膜电位)动态显示器  :  show_state
+    8). 拟合幂律分布          :  fit_power_law_distribution
 """
 
 import os

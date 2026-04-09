@@ -7,8 +7,6 @@
 
 import numpy as np
 
-import numpy as np
-
 # ================= 寻找穿过点 =================
 # 可以用来找 MSF 的阈值
 def find_crossings(y, v=0, x=None):
